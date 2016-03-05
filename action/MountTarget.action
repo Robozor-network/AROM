@@ -1,0 +1,14 @@
+#goal definition
+int32[] coordinates
+bool type
+int8 speed = 5
+---
+#result definition
+int32[] coordinates
+bool type
+int8 status
+---
+#feedback
+int32[] coordinates
+bool type
+bool done

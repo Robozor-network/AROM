@@ -1,0 +1,5 @@
+bool type
+---
+int32[] coordinates
+bool type
+bool done

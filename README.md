@@ -1,2 +1,2 @@
 # AROM
-Autonomous robotic observatory manager
+Autonomous Robotic Observatory Manager

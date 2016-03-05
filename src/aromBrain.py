@@ -7,8 +7,8 @@ from pymlab import config
 import std_msgs
 from std_msgs.msg import String
 from std_msgs.msg import Float32
-from sensor_server.srv import *
-from sensor_server.msg import *
+from arom.srv import *
+from arom.msg import *
 
 import json
 from drivers import mount
@@ -23,20 +23,22 @@ from drivers import roof
 class AromBrain():
     def __init__(self):
         rospy.init_node('AROM_brain')
+        self.drivers = {}
+
+        s_RegisterDriver = rospy.Service('arom/RegisterDriver', arom.srv.RegisterDriver, self.RegisterDriver)
+
         self.config_file = sys.argv[1].decode('utf-8')
         with open(self.config_file) as data_file:    
             self.config = json.load(data_file)
         rospy.set_param("ObservatoryConfig/file", str(self.config_file))
 
-        devices = self.config['devices']
-        for deviceType in devices:
-            for device in devices[deviceType]:
-                try:
-                    driver = self.loadDriver(deviceType, devices[deviceType][device]['driver'])
-                    rospy.set_param("drivers/"+str(deviceType)+"/"+str(devices[deviceType][device]['sname']), str(driver))
 
-                except Exception, e:
-                    print e
+        rospy.spin()
+
+    def RegisterDriver(self, srv):
+        print "RegisterDriver:", srv
+        self.drivers[srv.sname] = srv
+        return 1
 
     def loadDriver(self, deviceType = None, driverName = 'mount'):
         try:
