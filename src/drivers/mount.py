@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import math
+import time
 import rospy
 import std_msgs
 import actionlib
@@ -13,10 +14,13 @@ import serial
 
 
 class mount():
-    def __init__(self, parent = None, name = "mount", port=None):
+    def __init__(self, parent = None, name = "mount", port="/dev/ttyUSB0", connect = 1):
+        self.Autoconnect = connect
         self.port = port
         self.parent = parent
         self.name = name
+        self.coordinates = [0,0]  ## Ra, Dec
+        self.coordinates_geo = [0, 0, 0] ## Lat, Lon, Alt
 
         ##
         ##  Ceka to na spusteni AROMbrain nodu
@@ -28,8 +32,8 @@ class mount():
         rospy.loginfo("%s: >> done" % self.name)
 
         ##
-        ## Registrace zarizeni
-        ## >Arom returns 1 - OK, 0 - False
+        ##  Registrace zarizeni
+        ##  >Arom returns 1 - OK, 0 - False
         ##
 
         RegisterDriver = rospy.ServiceProxy('arom/RegisterDriver', arom.srv.RegisterDriver)
@@ -37,13 +41,39 @@ class mount():
         rospy.loginfo("%s: >> register %s" %(self.name, registred))
 
         ##
-        ## Spusti se Action servis pro zmenu cile
+        ##  Spusti se Action servis pro zmenu cile
         ##
 
         self.act = actionlib.SimpleActionServer('AROM/mount/target', arom.msg.MountTargetAction, execute_cb=self.ReciveTarget, auto_start = False)
         self.act.start()
+
+        ##
+        ##  Ovladac se pripoji k montazi
+        ##
+
+        if self.Autoconnect:
+            self.connect()
+
+        ##
+        ##  Vytvoreni servisu na praci s montazi
+        ##
+
+        self.s_MountParameters = rospy.Service('arom/mount/parameter', arom.srv.MountParameter, self.MountParameter)
+
+        ##
+        ##  Ovladac pujde ukoncit
+        ##
+
         rospy.spin()
 
+
+    def MountParameter(self, MountParameter = None):
+        rospy.loginfo('%s: GetNewParameters: %s' %(self.name, MountParameter))
+        out = getattr(self, str(MountParameter.name))()
+        rospy.loginfo('%s: GetNewParameters: out >> %s' %(self.name, str(out)))
+        done = {'value': str(out), 'parameters': '', 'done': 1}
+        print done
+        return arom.srv.MountParameterResponse(str(out), str('raw'), 1)
 
     def ReciveTarget(self, target = None):
         print "Target:", target
@@ -52,8 +82,8 @@ class mount():
     def reciveMSG(self, msg):
         pass
 
-    def connect(self, port = None):
-        print "connecting", port
+    def connect(self):
+        print "connecting"
 
     def park(self):
         print "park"
@@ -79,8 +109,8 @@ class mount():
     def setPosition(self):
         raise NotImplementedError()
 
-    def getPosition(self):
-        raise NotImplementedError()
+    def getPosition(self, param = None):
+        print "position :)", param
 
     def getStatus(self):
         raise NotImplementedError()
@@ -108,19 +138,58 @@ class EQmod(mount):
     def start(self):
         print "EQmod driver started"
         
+
+######################################################################################
+######################################################################################
+##                                                                                  ##
+##                   Driver for SynScan mount hand controller                       ##
+##                 ============================================                     ##
+##                                                                                  ##
+##      It does not support telescope setAligmentPoint                              ##
+##                                                                                  ##
+######################################################################################
+
 class SynScan(mount):
-    def connect(self, port=None):
+
+    def connect(self, port="/dev/ttyUSB1"):
+        print "connect > start"
+        rospy.loginfo("connect > start")
+        
         if port:
             self.port = port
-        self.ser = serial.Serial(
-            port=self.port,
-            baudrate=9600,
-            parity=serial.PARITY_NO,
-            stopbits=serial.STOPBITS_ONE,
-            #bytesize=serial.SEVENBITS
-        )
+
+        self.ser = serial.Serial()
+        self.ser.baudrate = 9600
+        self.ser.port = self.port
+        self.ser.stopbits = serial.STOPBITS_ONE
+        self.ser.timeout = 0 ## non blocking
         self.ser.open()
+
+        rospy.loginfo("connect > connected %s" %str(self.ser))
+        self.ser.write("z")
+        data = self._GetData(string = 'z')
+        rospy.loginfo("actual position %s" %str(data))
+
+        
+
+    def _GetData(self, string, max_time = 10):
+        rospy.loginfo("GetDataRequest %s" %str(string))
+        self.ser.write(string)
+        data = ''
+        while not "#" in data:
+            data = self.ser.read(999)
+            if len(data) > 0:
+                return data
+            time.sleep(0.1)
+        return data
+
+    #def getPosition(self, param = None):
+    def getPosition(self, arguments = None):
+        print "get pos"
+        return self._GetData('z')
+
+
         
 
 if __name__ == '__main__':
-    mount()
+    SynScan()

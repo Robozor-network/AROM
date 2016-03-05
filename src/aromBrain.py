@@ -33,6 +33,11 @@ class AromBrain():
         rospy.set_param("ObservatoryConfig/file", str(self.config_file))
 
 
+        rospy.wait_for_service('arom/mount/parameter')
+        mount = rospy.ServiceProxy('arom/mount/parameter', arom.srv.MountParameter)
+        registred = mount(name = 'getPosition', value = '')
+        rospy.loginfo("%s: >> position %s" %("brain", registred))
+
         rospy.spin()
 
     def RegisterDriver(self, srv):

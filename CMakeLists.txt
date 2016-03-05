@@ -24,6 +24,7 @@ add_message_files(
 add_service_files(
    FILES
    MountGetCoordinates.srv
+   MountParameter.srv
    RegisterDriver.srv
 #   Service1.srv
 #   Service2.srv

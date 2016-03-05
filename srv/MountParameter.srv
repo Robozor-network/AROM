@@ -1,0 +1,8 @@
+string name
+string type
+string value
+bool done
+---
+string value
+string type
+bool done
