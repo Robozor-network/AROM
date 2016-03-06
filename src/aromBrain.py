@@ -11,12 +11,12 @@ from arom.srv import *
 from arom.msg import *
 
 import json
-from drivers import mount
-from drivers import camera
-from drivers import focuser
-from drivers import weatherStation
-from drivers import rotator
-from drivers import roof
+#from drivers import mount
+#from drivers import camera
+#from drivers import focuser
+#from drivers import weatherStation
+#from drivers import rotator
+#from drivers import roof
 #import drivers
 
 
@@ -36,6 +36,8 @@ class AromBrain():
         rospy.wait_for_service('arom/mount/parameter')
         mount = rospy.ServiceProxy('arom/mount/parameter', arom.srv.MountParameter)
         registred = mount(name = 'getPosition', value = '')
+        #registred = mount(name = 'getPosition_geo', value = '')
+        registred = mount(name = 'getTime', value = '')
         rospy.loginfo("%s: >> position %s" %("brain", registred))
 
         rospy.spin()
