@@ -144,6 +144,12 @@ class mount():
         
 
 class EQmod(mount):
+
+    ##
+    ##  to slew use ":G100", ":I1060000", ":H17C028C", ":M1800C00"
+    ##                motion mode    stepperperiod   SetGoToTargetIncrement  SetBreakPointIncrement
+    ## 
+
     def __init__(self):    
         self.data = ""  
         self.Initialize ='F'
@@ -159,10 +165,10 @@ class EQmod(mount):
         self.GetAxisStatus='f'
         self.SetSwitch='O'
         self.SetMotionMode='G'
-        self.SetGotoTargetIncrement='H'
-        self.SetBreakPointIncrement='M'
+        self.SetGotoTargetIncrement='H'      ##
+        self.SetBreakPointIncrement='M'      ##
         self.SetBreakSteps='U'
-        self.SetStepPeriod='I'
+        self.SetStepPeriod='I'                 ## 
         self.StartMotion='J'
         self.GetStepPeriod='D' # See Merlin protocol http://www.papywizard.org/wiki/DevelopGuide
         self.ActivateMotor='B' # See eq6direct implementation http://pierre.nerzic.free.fr/INDI/
@@ -186,17 +192,26 @@ class EQmod(mount):
         self.ser.stopbits = serial.STOPBITS_ONE
         self.ser.timeout = 0 ## non blocking
         self.ser.open()
-        print self._GetData(self.Initialize,3)
+        print self._GetData(self.InquireMotorBoardVersion, self.Axis1)
+        print self._GetData(self.InquireGridPerRevolution, self.Axis1)
+        print self._GetData(self.InquireTimerInterruptFreq, self.Axis1)
+        print self._GetData(self.InquireHighSpeedRatio, self.Axis1)
+        print self._GetData(self.InquireGridPerRevolution, self.Axis2)
+        print self._GetData(self.InquireTimerInterruptFreq, self.Axis2)
+        print self._GetData(self.InquireHighSpeedRatio, self.Axis2)
 
     def _GetData(self, cmd, axis, param = None, max_time = 10):
         rospy.loginfo("GetDataRequest %s" %str(cmd))
         SkywatcherLeadingChar = ':'
-        SkywatcherTrailingChar = 0x0d
+        #SkywatcherTrailingChar = 0x0d
+        SkywatcherTrailingChar = '\r'
 
         if not param:
             req = "%c%c%c%c" %(SkywatcherLeadingChar, cmd, axis, SkywatcherTrailingChar)
+            print "##>%s" %repr(req)
         else:
             req = "%c%c%c%s%c" %(SkywatcherLeadingChar, cmd, axis, param, SkywatcherTrailingChar)
+            print "##>%s" %repr(req)
         self.ser.write(req)
         data = ""
         while 1:
@@ -204,6 +219,7 @@ class EQmod(mount):
             if len(data) > 0:
                 pass
             if ("#" in data) or ("=" in data) or ("!" in data):
+                print "++>%s" %repr(data)
                 break
             time.sleep(0.05)
 
@@ -218,13 +234,58 @@ class EQmod(mount):
             print "<<>> poblem"
             return data
 
-    def setPosition(self, loc = [0,0], param = None):
+    def setPosition(self, loc = [0,0], change = [0,0], param = None):
         self.coordinates_target = loc
+        change[0] = self.coordinates[0] - self.coordinates_target[0]
+        change[1] = self.coordinates[1] - self.coordinates_target[1]
         try:
-            ra = self._GetData(self.SetAxisPosition, self.Axis1, self.long2Revu24str(loc[0]))
-            dec = self._GetData(self.SetAxisPosition, self.Axis2, self.long2Revu24str(loc[1]))
-            print self._GetData(self.StartMotion,1)
-            print self._GetData(self.StartMotion,2)
+            ra = self._GetData('K', self.Axis1, "")
+            ra = self._GetData('K', self.Axis2, "")
+            '''
+            :G201<cr>
+            :f2<cr>
+            :I2060000<cr>
+            :H2EB087D<cr>
+            :M2800C00<cr>
+            '''
+            ra = self._GetData(self.NotInstantAxisStop, self.Axis1,)
+            ra = self._GetData(self.GetAxisStatus, self.Axis1,)
+            ra = self._GetData('G', self.Axis1, "21")
+            ra = self._GetData('f', self.Axis1, "")
+            ra = self._GetData('I', self.Axis1, "120000")        # J
+            ra = self._GetData('H', self.Axis1, "E24100")
+            ra = self._GetData('M', self.Axis1, "C80000")
+            ra = self._GetData('J', self.Axis1)
+           
+            '''
+            2016-03-07T18:48:54: dispatch_command: ":J1", 4 bytes written 
+            2016-03-07T18:48:54: read_eqmod: "=", 2 bytes read 
+            2016-03-07T18:48:54: dispatch_command: ":M1C80000", 10 bytes written 
+            2016-03-07T18:48:54: read_eqmod: "=", 2 bytes read 
+            2016-03-07T18:48:54: dispatch_command: ":H1E24100", 10 bytes written 
+            2016-03-07T18:48:54: read_eqmod: "=", 2 bytes read 
+            2016-03-07T18:48:54: dispatch_command: ":I1120000", 10 bytes written 
+            2016-03-07T18:48:54: read_eqmod: "=201", 5 bytes read 
+            2016-03-07T18:48:54: dispatch_command: ":f1", 4 bytes written 
+            2016-03-07T18:48:54: read_eqmod: "=", 2 bytes read 
+            2016-03-07T18:48:54: dispatch_command: ":G121", 6 bytes written 
+            '''
+            ra = self._GetData(self.NotInstantAxisStop, self.Axis2)
+            ra = self._GetData(self.GetAxisStatus, self.Axis2)
+            ra = self._GetData('G', self.Axis2, "21")
+            ra = self._GetData('f', self.Axis2)
+            ra = self._GetData('I', self.Axis2, "120000")        # J
+            ra = self._GetData('H', self.Axis2, "E24100")
+            ra = self._GetData('M', self.Axis2, "C80000")
+            ra = self._GetData('J', self.Axis2)
+
+
+
+            #dec = self._GetData(self.SetBreakPointIncrement, self.Axis2, "800C00")
+            #ra = self._GetData('M', self.Axis1, "01")
+            #dec = self._GetData('M', self.Axis2, "01")
+            #print self._GetData(self.StartMotion,1)
+            #print self._GetData(self.StartMotion,2)
         except Exception, e:
             print e
         print ra, dec, "   eaeoeaoeoae"
@@ -236,14 +297,13 @@ class EQmod(mount):
         #dec = self.coordinates[1]
         #print self.coordinates
         try:
-            print self._GetData(self.GetAxisPosition, self.Axis1),
-            ra = self.Revu24str2long(self._GetData(self.GetAxisPosition, self.Axis1)[1:-1])
-            dec = self.Revu24str2long(self._GetData(self.GetAxisPosition, self.Axis2)[1:-1])
+            raw = self._GetData(self.GetAxisPosition, self.Axis1)
+            decw = self._GetData(self.GetAxisPosition, self.Axis2)
         except Exception, e:
             print e
-
-        print "%s: >> position >> RA:%s, DEC:%s - ra: %.5f dec: %.5f --- %s" %("", str(ra), str(dec), float(ra/self.AxisTick*360.0), float(dec/self.AxisTick*360.0), self.long2Revu24str(ra))
-        rospy.loginfo("%s: >> position >> RA:%s, DEC:%s - ra: %.5f dec: %.5f" %("", str(ra), str(dec), float(ra/self.AxisTick*360.0), float(dec/self.AxisTick*360.0)))
+        ra = self.Revu24str2long(raw[1:-1])
+        dec = self.Revu24str2long(decw[1:-1])
+        print "%s: >> position >> RA:%s, DEC:%s - ra: %.5f dec: %.5f --- %s, $$$ %s %s" %("", str(ra), str(dec), float(ra/self.AxisTick*360.0), float(dec/self.AxisTick*360.0), self.long2Revu24str(ra), repr(raw), repr(decw))
         
         self.coordinates = [float(ra/self.AxisTick*360.0), float(dec/self.AxisTick*360.0)]
         return self.coordinates
