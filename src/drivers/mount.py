@@ -23,6 +23,7 @@ class mount():
         self.coordinates_offset = [0, 0]
         self.coordinates_target = [0, 0]  ## Ra, Dec
         self.coordinates_geo = [0, 0, 0] ## Lat, Lon, Alt
+        self.DayLenght = {'solar': (24.0*60*60), 'sideral': (23.0*60*60 + 56.0*60 + 4.0916), 'moon':  (24.0*60*60 + 49.0*60), 'custom': (24.0*60*60)}
 
         ##
         ##  Ceka to na spusteni AROMbrain nodu
@@ -145,12 +146,8 @@ class mount():
 
 class EQmod(mount):
 
-    ##
-    ##  to slew use ":G100", ":I1060000", ":H17C028C", ":M1800C00"
-    ##                motion mode    stepperperiod   SetGoToTargetIncrement  SetBreakPointIncrement
-    ## 
-
-    def __init__(self):    
+    def __init__(self):   
+        self.mountParams = {} 
         self.data = ""  
         self.Initialize ='F'
         self.InquireMotorBoardVersion='e'
@@ -177,6 +174,25 @@ class EQmod(mount):
         self.Axis1='1'       # RA/AZ
         self.Axis2='2'       # DE/ALT
         self.AxisTick = 16777215.0
+        self.DayLenght = {'solar': (24.0*60*60), 'sideral': (23.0*60*60 + 56.0*60 + 4.0916), 'moon':  (24.0*60*60 + 49.0*60), 'custom': (24.0*60*60)}
+        self.coordinates = [0,0]
+        self.syncOffSet = [0,0]
+
+
+############################################################################################################################################################################
+############################################################################################################################################################################
+############################################################################################################################################################################
+############################################################################################################################################################################
+############################################################################################################################################################################
+
+######################################################################################
+######################################################################################
+##                                                                                  ##
+##                     Driver for --EQmod-- mount controller                        ##
+##                 ============================================                     ##
+##                                                                                  ##
+##                                                                                  ##
+######################################################################################
 
 
     def connect(self, port="/dev/ttyUSB0"):
@@ -192,13 +208,57 @@ class EQmod(mount):
         self.ser.stopbits = serial.STOPBITS_ONE
         self.ser.timeout = 0 ## non blocking
         self.ser.open()
-        print self._GetData(self.InquireMotorBoardVersion, self.Axis1)
-        print self._GetData(self.InquireGridPerRevolution, self.Axis1)
-        print self._GetData(self.InquireTimerInterruptFreq, self.Axis1)
-        print self._GetData(self.InquireHighSpeedRatio, self.Axis1)
-        print self._GetData(self.InquireGridPerRevolution, self.Axis2)
-        print self._GetData(self.InquireTimerInterruptFreq, self.Axis2)
-        print self._GetData(self.InquireHighSpeedRatio, self.Axis2)
+        self.mountParams['F1'] = self._GetData(self.Initialize, self.Axis1)
+        self.mountParams['F2'] = self._GetData(self.Initialize, self.Axis2)
+        self.mountParams['e'] = self._GetData(self.InquireMotorBoardVersion, self.Axis1)
+        self.mountParams['a1'] = self._GetData(self.InquireGridPerRevolution, self.Axis1)
+        self.mountParams['b1'] = self._GetData(self.InquireTimerInterruptFreq, self.Axis1)
+        self.mountParams['g1'] = self._GetData(self.InquireHighSpeedRatio, self.Axis1)
+        self.mountParams['a2'] = self._GetData(self.InquireGridPerRevolution, self.Axis2)
+        self.mountParams['b2'] = self._GetData(self.InquireTimerInterruptFreq, self.Axis2)
+        self.mountParams['g2'] = self._GetData(self.InquireHighSpeedRatio, self.Axis2)
+        print "Connection DONE"
+
+    # Get mount name
+        self.electronicVersion={}
+        self.electronicVersion['raw']=self.Revu24str2long(self.mountParams['e']);
+        self.electronicVersion['mountID'] = ((self.electronicVersion['raw'] & 0xFF) << 16) | ((self.electronicVersion['raw'] & 0xFF00)) | ((self.electronicVersion['raw'] & 0xFF0000) >> 16);
+        self.mountID=self.electronicVersion['mountID'] & 0xFF;
+
+        if  self.electronicVersion ['mountID'] & 0xFF ==  0x00:
+            self.electronicVersion['name'] = "EQ6"
+
+        elif self.electronicVersion['mountID'] & 0xFF == 0x01:
+            self.electronicVersion['name'] = "HEQ5"
+
+        elif self.electronicVersion['mountID'] & 0xFF == 0x02:
+            self.electronicVersion['name'] = "EQ5"
+
+        elif self.electronicVersion['mountID'] & 0xFF == 0x03:
+            self.electronicVersion['name'] = "EQ3"
+
+        elif self.electronicVersion['mountID'] & 0xFF == 0x80:
+            self.electronicVersion['name'] = "GT"
+
+        elif self.electronicVersion['mountID'] & 0xFF == 0x81:
+            self.electronicVersion['name'] = "MF"
+
+        elif self.electronicVersion['mountID'] & 0xFF == 0x82:
+            self.electronicVersion['name'] = "114GT"
+
+        elif self.electronicVersion['mountID'] & 0xFF == 0x90:
+            self.electronicVersion['name'] = "DOB"
+
+        elif self.electronicVersion['mountID'] & 0xFF == 0xF0:
+            self.electronicVersion['name'] = "GEEHALEL"
+        else:
+            self.electronicVersion['name'] = "Unknown_0x%x" %(self.electronicVersion['mountID'] & 0xFF)
+
+    # get Steps per one axcis revolution
+        self.stepsPerRev={}
+        self.stepsPerRev[1]= self.Revu24str2long(self.mountParams['a1'])
+        self.stepsPerRev[2]= self.Revu24str2long(self.mountParams['a1'])
+
 
     def _GetData(self, cmd, axis, param = None, max_time = 10):
         rospy.loginfo("GetDataRequest %s" %str(cmd))
@@ -208,10 +268,9 @@ class EQmod(mount):
 
         if not param:
             req = "%c%c%c%c" %(SkywatcherLeadingChar, cmd, axis, SkywatcherTrailingChar)
-            print "##>%s" %repr(req)
         else:
             req = "%c%c%c%s%c" %(SkywatcherLeadingChar, cmd, axis, param, SkywatcherTrailingChar)
-            print "##>%s" %repr(req)
+        print "##>%s" %repr(req), 
         self.ser.write(req)
         data = ""
         while 1:
@@ -219,120 +278,85 @@ class EQmod(mount):
             if len(data) > 0:
                 pass
             if ("#" in data) or ("=" in data) or ("!" in data):
-                print "++>%s" %repr(data)
+                print "\t \t >>> %s" %repr(data)
                 break
             time.sleep(0.05)
 
-        if "#" in data:
-            print "<<>> print #"
-        elif "=" in data:
-            #print "<<>> print ="
+        if "=" in data:
             return data
-        elif "!" in data:
-            print "<<>> print !"
         else:
-            print "<<>> poblem"
             return data
 
-    def setPosition(self, loc = [0,0], change = [0,0], param = None):
+    def setPosition(self, loc = [0,0], param = None):
         self.coordinates_target = loc
+        change = [0,0]
         change[0] = self.coordinates[0] - self.coordinates_target[0]
         change[1] = self.coordinates[1] - self.coordinates_target[1]
+
+        dirRA = '20'
+        dirDEC= '20'
+        if change[0] < 0:
+            dirRA = '21'
+        if change[1] < 0:
+            dirDEC = '21'
+
+        stepsRA = self.stepsPerRev[1] * change[0] / 360.0
+        stepsDEC = self.stepsPerRev[2] * change[1] / 360.0
+
         try:
             ra = self._GetData('K', self.Axis1, "")
             ra = self._GetData('K', self.Axis2, "")
-            '''
-            :G201<cr>
-            :f2<cr>
-            :I2060000<cr>
-            :H2EB087D<cr>
-            :M2800C00<cr>
-            '''
+
             ra = self._GetData(self.NotInstantAxisStop, self.Axis1,)
             ra = self._GetData(self.GetAxisStatus, self.Axis1,)
-            ra = self._GetData('G', self.Axis1, "21")
-            ra = self._GetData('f', self.Axis1, "")
-            ra = self._GetData('I', self.Axis1, "120000")        # J
-            ra = self._GetData('H', self.Axis1, "E24100")
-            ra = self._GetData('M', self.Axis1, "C80000")
-            ra = self._GetData('J', self.Axis1)
+            ra = self._GetData(self.SetMotionMode, self.Axis1, dirRA)
+            ra = self._GetData(self.GetAxisStatus, self.Axis1)
+            ra = self._GetData(self.SetStepPeriod, self.Axis1, "120000")
+            ra = self._GetData(self.SetGotoTargetIncrement, self.Axis1, self.long2Revu24str(stepsRA))
+            ra = self._GetData(self.SetBreakPointIncrement, self.Axis1, "C80000")
            
-            '''
-            2016-03-07T18:48:54: dispatch_command: ":J1", 4 bytes written 
-            2016-03-07T18:48:54: read_eqmod: "=", 2 bytes read 
-            2016-03-07T18:48:54: dispatch_command: ":M1C80000", 10 bytes written 
-            2016-03-07T18:48:54: read_eqmod: "=", 2 bytes read 
-            2016-03-07T18:48:54: dispatch_command: ":H1E24100", 10 bytes written 
-            2016-03-07T18:48:54: read_eqmod: "=", 2 bytes read 
-            2016-03-07T18:48:54: dispatch_command: ":I1120000", 10 bytes written 
-            2016-03-07T18:48:54: read_eqmod: "=201", 5 bytes read 
-            2016-03-07T18:48:54: dispatch_command: ":f1", 4 bytes written 
-            2016-03-07T18:48:54: read_eqmod: "=", 2 bytes read 
-            2016-03-07T18:48:54: dispatch_command: ":G121", 6 bytes written 
-            '''
             ra = self._GetData(self.NotInstantAxisStop, self.Axis2)
             ra = self._GetData(self.GetAxisStatus, self.Axis2)
-            ra = self._GetData('G', self.Axis2, "21")
-            ra = self._GetData('f', self.Axis2)
-            ra = self._GetData('I', self.Axis2, "120000")        # J
-            ra = self._GetData('H', self.Axis2, "E24100")
-            ra = self._GetData('M', self.Axis2, "C80000")
-            ra = self._GetData('J', self.Axis2)
+            ra = self._GetData(self.SetMotionMode, self.Axis2, dirDEC)
+            ra = self._GetData(self.GetAxisStatus, self.Axis2)
+            ra = self._GetData(self.SetStepPeriod, self.Axis2, "120000")
+            ra = self._GetData(self.SetGotoTargetIncrement, self.Axis2, self.long2Revu24str(stepsDEC))
+            ra = self._GetData(self.SetBreakPointIncrement, self.Axis2, "C80000")
 
+            ra = self._GetData(self.StartMotion, self.Axis1)
+            ra = self._GetData(self.StartMotion, self.Axis2)
 
+            time.sleep(1)
+            while True:
+                ax0 = self._GetData(self.GetAxisStatus, self.Axis1)
+                ax1 = self._GetData(self.GetAxisStatus, self.Axis2)
+                print "osy", ax1, ax0
+                if ax0[2] ==  "0" and ax1[2] ==  "0":
+                    self.coordinates = self.coordinates_target
+                    break
+                time.sleep(0.1)
+            
+            sp = self.long2Revu24str( int(self.stepsPerRev[1]/self.DayLenght['sideral'])*6)
+            ra = self._GetData(self.SetStepPeriod, self.Axis1, sp) 
+            ra = self._GetData(self.StartMotion, self.Axis1)
 
-            #dec = self._GetData(self.SetBreakPointIncrement, self.Axis2, "800C00")
-            #ra = self._GetData('M', self.Axis1, "01")
-            #dec = self._GetData('M', self.Axis2, "01")
-            #print self._GetData(self.StartMotion,1)
-            #print self._GetData(self.StartMotion,2)
         except Exception, e:
             print e
-        print ra, dec, "   eaeoeaoeoae"
+        print "coordinates, ra:%s, dec:%s" %(str(ra), str(dec))
 
         return self.coordinates_target
 
     def getPosition(self, param = None):
-        #ra  = self.coordinates[0]
-        #dec = self.coordinates[1]
-        #print self.coordinates
         try:
             raw = self._GetData(self.GetAxisPosition, self.Axis1)
             decw = self._GetData(self.GetAxisPosition, self.Axis2)
         except Exception, e:
             print e
-        ra = self.Revu24str2long(raw[1:-1])
-        dec = self.Revu24str2long(decw[1:-1])
-        print "%s: >> position >> RA:%s, DEC:%s - ra: %.5f dec: %.5f --- %s, $$$ %s %s" %("", str(ra), str(dec), float(ra/self.AxisTick*360.0), float(dec/self.AxisTick*360.0), self.long2Revu24str(ra), repr(raw), repr(decw))
+        ra = self.Revu24str2long(raw)
+        dec = self.Revu24str2long(decw)
         
         self.coordinates = [float(ra/self.AxisTick*360.0), float(dec/self.AxisTick*360.0)]
         return self.coordinates
-
-    def setPosition_geo(self, param = None):
-        raise NotImplementedError()
-
-    def getPosition_geo(self, param = None):
-        print "position :)", param
-
-    def setTime(self, param = None):
-        raise NotImplementedError()
-
-    def getTime(self, param = None):
-        Time_Q = Time_R = Time_S = Time_T = Time_U = Time_V = Time_W = Time_X = 0
-        time_data = {}
-        raw = self._GetData('h')
-        print repr(raw)
-        raw = repr(self._GetData('h').decode('ascii'))               # nejaka chyba ve vycitani ... spravny
-        print raw
-        raw1 = raw.split("#")[0]
-        print raw1
-        raw2 = raw1.split('\\x')
-        print raw2
-        for x in xrange(1,len(raw2)):
-            try:
-                print x, int(raw2[x],16)
-            except Exception, e:
-                raise e
 
     def GetMotorStatus(self, axis):
         response = self._GetData(self.GetAxisStatus, axis);
@@ -373,7 +397,7 @@ class EQmod(mount):
 
 
     def Revu24str2long(self, s):
-        s = str(s)
+        s = str(s)[1:-1]
         res = 0
         try:
             res = int(s[4], 16)
@@ -392,7 +416,7 @@ class EQmod(mount):
         return res
 
     def long2Revu24str(self, n):
-        n = int(n/360*self.AxisTick)
+        n = int(n)
         out=""
         hexa = ['0', '1', '2', '3', '4', '5', '6', '7', 
                 '8', '9', 'A', 'B', 'C', 'D', 'E', 'F']
@@ -416,42 +440,12 @@ class EQmod(mount):
 
 '''
 
-'''
 
-
-
-    bool Skywatcher::dispatch_command(SkywatcherCommand cmd, SkywatcherAxis axis, char *command_arg) throw (EQModError)
-{
-  int err_code = 0, nbytes_written=0, nbytes_read=0;
-
-  // Clear string
-  command[0] = '\0';
-  
-  if (command_arg==NULL) 
-    snprintf(command, SKYWATCHER_MAX_CMD, "%c%c%c%c", SkywatcherLeadingChar, cmd, axis, SkywatcherTrailingChar);
-  else
-    snprintf(command, SKYWATCHER_MAX_CMD, "%c%c%c%s%c", SkywatcherLeadingChar, cmd, axis, command_arg, SkywatcherTrailingChar);
-
-  tcflush(fd, TCIOFLUSH);
-  
-  if  ( (err_code = tty_write_string(fd, command, &nbytes_written) != TTY_OK))
-    {
-      char ttyerrormsg[ERROR_MSG_LENGTH];
-      tty_error_msg(err_code, ttyerrormsg, ERROR_MSG_LENGTH);
-      throw EQModError(EQModError::ErrDisconnect, "tty write failed, check connection: %s", 
-               ttyerrormsg);
-      return false;
-   }
-
-  //if (INDI::Logger::debugSerial(cmd)) {
-    command[nbytes_written-1]='\0'; //hmmm, remove \r, the  SkywatcherTrailingChar
-    DEBUGF(DBG_COMM, "dispatch_command: \"%s\", %d bytes written", command, nbytes_written);
-    debugnextread=true;
-  //}
-  return true;
-}
-'''
-        
+############################################################################################################################################################################
+############################################################################################################################################################################
+############################################################################################################################################################################
+############################################################################################################################################################################
+############################################################################################################################################################################
 
 ######################################################################################
 ######################################################################################
@@ -548,17 +542,17 @@ if __name__ == '__main__':
     mount = EQmod()
     mount.connect()
     mount.getPosition()
-    #mount.GetMotorStatus(1)
-    #mount.GetMotorStatus(2)
     for x in xrange(1,3):
         time.sleep(0.5)
         pos = mount.getPosition()
-    print "aeoaoeaoeeo", pos
     ra = pos[0]
     dec = pos[1]
-    ra += 1000
-    dec += 1000
-    print "aeoaoeaoeeo", pos
+    ra += 10
+    dec += 10
+    mount.setPosition([ra, dec])
+    print "-----------------------------"
+    ra = ra - 10
+    dec = dec - 10
     mount.setPosition([ra, dec])
 
     while 1:
