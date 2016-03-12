@@ -1,0 +1,8 @@
+string name
+string data
+string validate
+string check
+bool type
+---
+string data
+bool done

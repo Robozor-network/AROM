@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 add_message_files(
    FILES
+   DriverControlm.msg
 #   Message1.msg
 #   Message2.msg
 )
@@ -26,6 +27,7 @@ add_service_files(
    MountGetCoordinates.srv
    MountParameter.srv
    RegisterDriver.srv
+   DriverControl.srv
 #   Service1.srv
 #   Service2.srv
 )
