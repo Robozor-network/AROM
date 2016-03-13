@@ -390,8 +390,8 @@ class EQmod(mount):
             self.getPosition()
             change = [0,0]
             change[0] = Angle(Angle(self.coordinates_target.ra) - Angle(self.coordinates.ra))
-            change[1] = Angle(Angle(self.coordinates_target.dec) - Angle(self.coordinates.dec)).wrap_at('180d')
-            change[1] = Angle(0, unit='deg')
+            change[1] = Angle(Angle(self.coordinates_target.dec) - Angle(self.coordinates.dec)).wrap_at('90d')
+            #change[1] = Angle(0, unit='deg')
             print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
             rospy.loginfo( "Change: ]%s, %s] from: [%s] to: [%s]"%( str(change[0].degree),str(change[1].degree) , str(self.coordinates.to_string('dms')), str(self.coordinates_target.to_string('dms'))))
 
@@ -430,14 +430,9 @@ class EQmod(mount):
                 dirRA = '20'
             '''
 
-            if change[1].degree < 0 and change[1].degree >= -90:
+            if change[1].degree >= 0:
                 dirDEC = '21'
-            elif change[1].degree < -90:
-                dirDEC = '21'
-                change[1] -= 90
-            elif change[1].degree > 90:
-                change[1] = 90 - (change[1] - 90)
-            else:
+            elif change[1].degree < 0:
                 dirDEC = '20'
 
 
