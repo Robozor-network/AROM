@@ -400,24 +400,19 @@ class EQmod(mount):
             ##
 
             if change[0].degree < -180:
-                print "a"
                 dirRA = '20'
                 change[0] = Angle(360 + change[0].degree, unit = 'deg')
             elif change[0] <= 0:
-                print "b"
                 dirRA = '21'
                 change[0] = Angle(abs(change[0].degree), unit = 'deg')
             elif change[0].degree > 180:
-                print "c"
                 dirRA = '21'
                 change[0] = Angle(360 - change[0].degree, unit = 'deg')
             elif change[0].degree > 0:
-                print "d"
                 dirRA = '20'
             else:
                 dirRA = '20'
-                print "e"
-                self.logerr("blablabalblabal")
+                self.logwarn("Problem in 'setPosition': Ra is out_of_range")
 
 
             '''
@@ -487,7 +482,6 @@ class EQmod(mount):
                 if ax0[2] ==  "0" and ax1[2] ==  "0":
                     self.coordinates = self.coordinates_target
                     self.time_data = time.time()
-                    print "coor, caatarget", self.coordinates, self.coordinates_target
                     ra = self._GetData(self.NotInstantAxisStop, self.Axis1)
                     ra = self._GetData(self.NotInstantAxisStop, self.Axis2)
                     sp = self.long2Revu24str( int(self.stepsPerRev[1]/self.DayLenght['sidreal'])*6)
