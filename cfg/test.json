@@ -1,0 +1,37 @@
+[
+    
+    {
+        "type": "mount",
+        "name": "mount_montaz",
+        "driver": "EQmod"
+    },
+    {
+        "type": "telescope",
+        "name": "dalekohled",
+        "parent": "mount_montaz",
+        "driver": "telescope.telescope",
+        "t_type": "telescope.telescope"
+    },
+    {
+        "type": "camera",
+        "name": "cam_camera",
+        "parent": "dalekohled",
+        "driver": "camera.gphoto"
+    },
+    {
+        "type": "focuser",
+        "name": "cam_camera",
+        "parent": "cam_camera",
+        "driver": "acs.tefo"
+    },
+    {
+        "type": "weatherStation",
+        "name": "ws_AWS",
+        "driver": "AWS01B"
+    },
+    {
+        "type": "userInterface",
+        "name": "lcd",
+        "driver": "i2clcd"
+    }
+]

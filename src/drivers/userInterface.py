@@ -14,8 +14,8 @@ import serial
 from astropy.time import Time
 
 
-class weatherStation(object):
-    def __init__(self, parent = None, arg = None, name = "AWS01A", port="", connect = True, var = {}):
+class UserInteface(object):
+    def __init__(self, parent = None, arg = None, name = "I2CLCD", port="", connect = True, var = {}):
         self.arg = arg
         self.Autoconnect = connect
         self.port = port
@@ -29,13 +29,13 @@ class weatherStation(object):
 
         self.init()
 
-        s_RegisterDriver = rospy.Service('driver/weatherStation/%s' %self.name, arom.srv.DriverControl, self.reset)
+        s_RegisterDriver = rospy.Service('driver/userInteface/%s' %self.name, arom.srv.DriverControl, self.reset)
 
         ##
         ##  Ceka to na spusteni AROMbrain nodu
         ##
 
-        rospy.init_node('AROM_weatherStation')
+        rospy.init_node('AROM_userInterface')
         rospy.loginfo("%s: wait_for_service: 'arom/RegisterDriver'" % self.name)
         rospy.wait_for_service('arom/RegisterDriver')
         rospy.loginfo("%s: >> brain found" % self.name)
@@ -46,8 +46,8 @@ class weatherStation(object):
         ##
 
         RegisterDriver = rospy.ServiceProxy('arom/RegisterDriver', arom.srv.RegisterDriver)
-        registred = RegisterDriver(name = self.name, sname= self.name, driver = 'AWS01A', device = 'weatherStation', status = 1)
-        rospy.loginfo("%s: >> register %s driver: %s" %(self.name, 'AWS01A', registred))
+        registred = RegisterDriver(name = self.name, sname= self.name, driver = 'I2CLCD', device = 'userInteface', status = 1)
+        rospy.loginfo("%s: >> register %s driver: %s" %(self.name, 'I2CLCD', registred))
 
 
         ##
@@ -63,9 +63,11 @@ class weatherStation(object):
 
         rare = rospy.Rate(0.5)
         while not rospy.is_shutdown():
-            self.mesure()
+            self.run()
             rare.sleep()
 
+    def run(self):
+    	pass
 
     def reset(self, val=None):
         pass
@@ -85,27 +87,30 @@ class weatherStation(object):
 ##                                                                                  ##
 ######################################################################################
         
-class AWS01B(weatherStation):
+class i2clcd(UserInteface):
     def init(self): 
-        self.variables = {
-            'AWS_LTS_temp': 0,
-            'AWS_SHT_temp': 0,
-            'AWS_SHT_humi': 0
-            }
-        rospy.loginfo("AWS01A weather station requires 'pymlab_drive' service from 'ROSpymlabServer' node")
+        
+        rospy.loginfo("I2CLCD user inteface requires 'pymlab_drive' service from 'ROSpymlabServer' node")
         rospy.loginfo("run>> 'rosrun arom initPymlab.py'")
         rospy.wait_for_service('pymlab_drive')
         self.pymlab = rospy.ServiceProxy('pymlab_drive', PymlabDrive)
         rospy.loginfo("%s: >> 'ROSpymlabServer' found" % self.name)
-
-
-    def mesure(self):
-        self.variables['AWS_LTS_temp'] = self.pymlab(device="AWS_temp", method="get_temp", parameters=None).value
-        self.variables['AWS_SHT_temp'] = self.pymlab(device="AWS_humi", method="get_temp_8bit", parameters=None).value
-        self.variables['AWS_SHT_humi'] = self.pymlab(device="AWS_humi", method="get_hum_8bit", parameters=None).value
-        print self.variables
-        rospy.set_param("weatherStation", str(self.variables))
         
+    def run(self):
+    	weather = rospy.get_param("weatherStation")
+    	print weather
+
+
+        self.pymlab(device="StatusLCD", method="set_clear", parameters=None)
+        time.sleep(0.05)
+        self.pymlab(device="StatusLCD", method="set_home", parameters=None)
+        time.sleep(0.05)
+        self.pymlab(device="StatusLCD", method="puts", parameters="Tem:%.2fC SHT25" % (i, temperature))
+        time.sleep(0.05)
+        self.pymlab(device="StatusLCD", method="set_row2", parameters=None)
+        time.sleep(0.05)
+        self.pymlab(device="StatusLCD", method="puts", parameters="%dTem:%.2fC SHT25" % (i, temperature))
+
 
     def connect(self):
         pass

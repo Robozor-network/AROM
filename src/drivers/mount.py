@@ -11,6 +11,7 @@ from arom.srv import *
 from arom.msg import *
 import arom
 import serial
+import json
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.coordinates import Angle
@@ -19,7 +20,8 @@ from astropy.time import Time
 
 
 class mount():
-    def __init__(self, parent = None, name = "EQmod", port="/dev/ttyUSB0", connect = True):
+    def __init__(self, parent = None, arg = None, name = "EQmod", port="/dev/ttyUSB0", connect = True):
+        self.arg = arg
         self.newTarget = 0
         self.init()
         self.slewing = False
@@ -400,41 +402,25 @@ class EQmod(mount):
             ##
 
             if change[0].degree < -180:
-                dirRA = '20'
+                dirRA = '21'
                 change[0] = Angle(360 + change[0].degree, unit = 'deg')
             elif change[0] <= 0:
-                dirRA = '21'
+                dirRA = '20'
                 change[0] = Angle(abs(change[0].degree), unit = 'deg')
             elif change[0].degree > 180:
-                dirRA = '21'
+                dirRA = '20'
                 change[0] = Angle(360 - change[0].degree, unit = 'deg')
             elif change[0].degree > 0:
-                dirRA = '20'
+                dirRA = '21'
             else:
-                dirRA = '20'
+                dirRA = '21'
                 self.logwarn("Problem in 'setPosition': Ra is out_of_range")
 
 
-            '''
-
-            if change[0].degree < 0 and change[0].degree > -180:
-                dirRA = '21'
-                change[0] = Angle( abs(change[0].degree), unit = 'deg')
-            elif change[0].degree > 180:
-                dirRA = '21'
-                change[0] = Angle(360 - change[0].degree, unit = 'deg')
-            elif change[0].degree < -180:
-                dirRA = '20'
-                change[0] = Angle(360 - change[0].degree, unit = 'deg')
-            else:
-                dirRA = '20'
-            '''
-
             if change[1].degree >= 0:
-                dirDEC = '21'
-            elif change[1].degree < 0:
                 dirDEC = '20'
-
+            elif change[1].degree < 0:
+                dirDEC = '21'
 
 
             stepsRA = self.mountUnit[0] * abs(change[0].degree)
@@ -442,13 +428,6 @@ class EQmod(mount):
             print change
 
             rospy.loginfo("SLEW TO %s (%s) with difference %s" %(self.coordinates, self.getCoordinates, change))
-
-
-            #stepsRA = self._degRealToAxis(change[0], self.AxRa)
-            #stepsDEC = self._degRealToAxis(change[1], self.AxDec)
-
-            #ra = self._GetData('K', self.Axis1, "")
-            #ra = self._GetData(self.NotInstantAxisStop, self.Axis2, "")
 
             ra = self._GetData(self.NotInstantAxisStop, self.Axis1,)
             ra = self._GetData(self.GetAxisStatus, self.Axis1,)
@@ -473,7 +452,6 @@ class EQmod(mount):
             while True:
                 ax0 = self._GetData(self.GetAxisStatus, self.Axis1)
                 ax1 = self._GetData(self.GetAxisStatus, self.Axis2)
-                #print "osy", ax1, ax0
                 if ax0[2] ==  "0" and ax1[2] ==  "0":
                     self.coordinates = self.coordinates_target
                     self.time_data = time.time()
@@ -482,7 +460,7 @@ class EQmod(mount):
                     sp = self.long2Revu24str( int(self.stepsPerRev[1]/self.DayLenght['sidreal'])*6)
                     ra = self._GetData(self.SetStepPeriod, self.Axis1, sp) 
                     self.newTarget -= 1
-                    #ra = self._GetData(self.StartMotion, self.Axis1)
+                    ra = self._GetData(self.StartMotion, self.Axis1)
                     break
                 time.sleep(0.1)
             
@@ -502,42 +480,17 @@ class EQmod(mount):
             raw = self._GetData(self.GetAxisPosition, self.Axis1)
             decw = self._GetData(self.GetAxisPosition, self.Axis2)
 
-
             ra = self.Revu24str2long(raw)
-            dec = self.Revu24str2long(decw)  - self.stepsPerRev[1]/2
-            ra_old = self.coordinates.ra
-
+            dec = self.Revu24str2long(decw)
 
             ra =  Angle((ra ) / self.mountUnit[0], unit='deg') - Angle( 380*60*60*24 / (time.time() - self.driverSyncTime), unit='deg')
-            #ra =  Angle((ra ) / self.mountUnit[0], unit='deg')
-            #dec = Angle((dec) / self.mountUnit[1] - 90 - self.syncOffSet[1], unit='deg')
             dec = Angle(0, unit='deg')
-            '''
-            if dec.degree > 0 and dec.degree < 90*1:
-                pass
-            elif dec.degree < 90*2:
-                dec.degree -= 90
-            elif dec.degree < 90*3:
-                dec.degree -= 90*2
-            elif dec.degree < 90*4:
-                dec.degree -= 90*3
-            else:
-                dec.degree = 0
-                rospy.loginfo("Err: DEC over limit")
-            '''
-
-            #time_data
-            #ra += ra_old
-            #dec+=dec_old
-
-            print "\t \t \t \t \t \t \t \t\t \t \t \t \t \t \t \t ",ra, dec, self.coordinates_target.to_string('dms'), self.coordinates.position_angle(self.coordinates_target).degree > 0
             
             try:
                 self.coordinates_instrumental = SkyCoord(ra = ra, dec = dec)
             except Exception, e:
                 print e
-            #self.coordinates = SkyCoord(ra = ra * u.deg, dec = ra * u.deg)
-            #self.coordinates = SkyCoord(ra = 21.1901329787, dec = 21.1901329787, unit = 'deg')
+
             return self.coordinates
 
         except Exception, e:
@@ -714,20 +667,11 @@ class SynScan(mount):
         
 
 if __name__ == '__main__':
-    mount = EQmod()
-    #mount.connect()
-    mount.getPosition()
-    #for x in xrange(1,3):
-    #    time.sleep(0.5)
-    #    pos = mount.getPosition()
-    #ra = 0
-    #dec = 90
-    #mount.setPosition([ra, dec])
-    #print "-----------------------------"
-    #ra = ra - 10
-    #dec = dec - 10
-    #mount.setPosition([ra, dec])
-
-    #while 1:
-    #   time.sleep(1)
-    #   # mount.getPosition()
+    cfg = rospy.get_param("ObservatoryConfig/file")
+    with open(cfg) as data_file:
+        config = json.load(data_file)
+    for x in config:
+        if x['name'] == sys.argv[1]:
+            break
+    mount = locals()[x['driver']](arg = x)
+    #mount = EQmod()

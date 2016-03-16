@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
    FILES
    DriverControlm.msg
+   PymlabServerStatusM.msg # pro inicializaci PYMLAB serveru
 #   Message1.msg
 #   Message2.msg
 )
@@ -28,6 +29,9 @@ add_service_files(
    MountParameter.srv
    RegisterDriver.srv
    DriverControl.srv
+   PymlabInit.srv            # Pro inicializaci PYMLABU
+   PymlabServerStatus.srv    # Pro
+   PymlabDrive.srv           # Pro
 #   Service1.srv
 #   Service2.srv
 )

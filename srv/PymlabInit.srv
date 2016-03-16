@@ -1,0 +1,5 @@
+string i2c
+string bus
+string devices
+---
+bool status

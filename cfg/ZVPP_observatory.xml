@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<observatory>
+	<mount>
+		<name>Heq5</name>
+		<sname>EQmod</sname>
+		<driver>mount.EQmod</driver>
+		<telescope>
+			<name>Hlavni dalekohled</name>
+			<sname>main</sname>
+			<type>NWT</type>
+			<focal_lenght>1000</focal_lenght>
+			<diameter>130</diameter>
+			<camera>
+				<name>Hlavni>
+			</camera>
+		</telescope>
+		<telescope>
+			<name>Pointacni dalekohled</name>
+			<sname>pointing</sname>
+			<type>REF</type>
+			<focal_lenght>500</focal_lenght>
+			<diameter>100</diameter>
+			
+		</telescope>
+	</mount>
+	<dome>
+		<camera></camera>
+		<camera></camera>
+		<weatherStation></weatherStation>
+		<
+	</dome>
+</observatory>

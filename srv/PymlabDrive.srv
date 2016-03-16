@@ -1,0 +1,5 @@
+string device
+string method
+string parameters
+---
+string value
