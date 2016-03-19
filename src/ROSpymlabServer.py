@@ -96,14 +96,14 @@ class pymlab_server():
             return True
 
     def drive(self, cfg):
-        #print cfg
+        print cfg
         parameters = cfg.parameters
         method = cfg.method
         device = cfg.device
         if parameters == "" or parameters == None:
             reval = getattr(self.devices[cfg.device], cfg.method)()
         else:
-            reval = getattr(self.devices[cfg.device], cfg.method)(*eval(parameters))
+            reval = getattr(self.devices[cfg.device], cfg.method)(eval(parameters))
         return str(reval)
 
 

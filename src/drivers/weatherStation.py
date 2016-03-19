@@ -15,7 +15,7 @@ from astropy.time import Time
 
 
 class weatherStation(object):
-    def __init__(self, parent = None, arg = None, name = "AWS01A", port="", connect = True, var = {}):
+    def __init__(self, parent = None, arg = None, name = "AWS01B", port="", connect = True, var = {}):
         self.arg = arg
         self.Autoconnect = connect
         self.port = port

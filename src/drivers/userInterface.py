@@ -67,7 +67,7 @@ class UserInteface(object):
             rare.sleep()
 
     def run(self):
-    	pass
+        pass
 
     def reset(self, val=None):
         pass
@@ -97,19 +97,19 @@ class i2clcd(UserInteface):
         rospy.loginfo("%s: >> 'ROSpymlabServer' found" % self.name)
         
     def run(self):
-    	weather = rospy.get_param("weatherStation")
-    	print weather
+        weather = eval(rospy.get_param("weatherStation"))
+        print weather
 
 
-        self.pymlab(device="StatusLCD", method="set_clear", parameters=None)
+        self.pymlab(device="StatusLCD", method="clear")
         time.sleep(0.05)
-        self.pymlab(device="StatusLCD", method="set_home", parameters=None)
+        self.pymlab(device="StatusLCD", method="home")
         time.sleep(0.05)
-        self.pymlab(device="StatusLCD", method="puts", parameters="Tem:%.2fC SHT25" % (i, temperature))
+        self.pymlab(device="StatusLCD", method="puts", parameters="'Tem:%.2fC LTS'" % (float(weather['AWS_LTS_temp'])))
+        self.pymlab(device="StatusLCD", method="set_row2")
         time.sleep(0.05)
-        self.pymlab(device="StatusLCD", method="set_row2", parameters=None)
-        time.sleep(0.05)
-        self.pymlab(device="StatusLCD", method="puts", parameters="%dTem:%.2fC SHT25" % (i, temperature))
+        self.pymlab(device="StatusLCD", method="puts", parameters="'Hum:%.2fC SHT25'" % (float(weather['AWS_SHT_humi'])))
+
 
 
     def connect(self):

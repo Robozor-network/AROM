@@ -1,5 +1,4 @@
 [
-    
     {
         "type": "mount",
         "name": "mount_montaz",
@@ -32,6 +31,7 @@
     {
         "type": "userInterface",
         "name": "lcd",
-        "driver": "i2clcd"
+        "driver": "i2clcd",
+        "_mode": "change"
     }
 ]

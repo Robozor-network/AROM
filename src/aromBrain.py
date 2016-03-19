@@ -32,13 +32,13 @@ class AromBrain():
         self.camera = {}
         self.devices = {}
 
-        from drivers import mount, camera, roof, weatherStation, focuser, rotator
-        self.drivers = {
-            'EQmod': mount.EQmod,
-            'SynScan': mount.SynScan,
-            'mount': mount.EQmod,
-            'AWS01A': weatherStation.AWS01B,
-        }
+        #from drivers import mount, camera, roof, weatherStation, focuser, rotator
+       # self.drivers = {
+        #    'EQmod': mount.EQmod,
+        #    'SynScan': mount.SynScan,
+        #    'mount': mount.EQmod,
+        #    'AWS01B': weatherStation.AWS01B,
+        #}
 
         s_RegisterDriver = rospy.Service('arom/RegisterDriver', arom.srv.RegisterDriver, self.RegisterDriver)
 
@@ -56,7 +56,7 @@ class AromBrain():
         #eval('self.'+srv.device)[srv.sname] = {'name':srv.name, 'sname':srv.sname, 'driver':srv.driver, 'object':dev_driver}
         #self.devices[srv.sname] = {'name':srv.name, 'sname':srv.sname, 'driver':srv.driver, 'object':dev_driver}
         
-        rospy.loginfo("NewDevice>> type: %s, name %s (%s). With driver %s >> %s" %(srv.device, srv.name, srv.sname, srv.driver, str(self.devices[srv.sname])))
+        rospy.loginfo("NewDevice>> type: %s, name %s (%s). With driver %s" %(srv.device, srv.name, srv.sname, srv.driver))
         return 1
 
     def loadDriver(self, deviceType = None, driverName = 'mount'):

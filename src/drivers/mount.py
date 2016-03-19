@@ -455,8 +455,8 @@ class EQmod(mount):
                 if ax0[2] ==  "0" and ax1[2] ==  "0":
                     self.coordinates = self.coordinates_target
                     self.time_data = time.time()
-                    ra = self._GetData(self.NotInstantAxisStop, self.Axis1)
                     ra = self._GetData(self.NotInstantAxisStop, self.Axis2)
+                    ra = self._GetData(self.SetMotionMode, self.Axis1, '20')
                     sp = self.long2Revu24str( int(self.stepsPerRev[1]/self.DayLenght['sidreal'])*6)
                     ra = self._GetData(self.SetStepPeriod, self.Axis1, sp) 
                     self.newTarget -= 1
