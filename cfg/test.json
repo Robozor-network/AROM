@@ -2,7 +2,12 @@
     {
         "type": "mount",
         "name": "mount_montaz",
-        "driver": "EQmod"
+        "driver": "EQmod",
+        "port": "/dev/ttyUSB0",
+        "_park": false,
+        "_park_location": [0,90],
+        "_last_coord": [0,0],
+        "_horizont": "/home/odroid/robozor/src/arom/cfg/ZVPP_limit.svg"
     },
     {
         "type": "telescope",

@@ -5,6 +5,8 @@ import time
 import rospy
 import std_msgs
 import actionlib
+#import pandas
+import numpy as np
 from std_msgs.msg import String
 from std_msgs.msg import Float32
 from arom.srv import *
@@ -15,6 +17,8 @@ import json
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.coordinates import Angle
+from astropy.coordinates import EarthLocation
+from astropy.coordinates import AltAz
 from astropy.time import Time
 
 
@@ -22,6 +26,7 @@ from astropy.time import Time
 class mount():
     def __init__(self, parent = None, arg = None, name = "EQmod", port="/dev/ttyUSB0", connect = True):
         self.arg = arg
+        self.observatory = EarthLocation(lat=49*u.deg, lon=14*u.deg, height=300*u.m)
         self.newTarget = 0
         self.init()
         self.slewing = False
@@ -32,16 +37,13 @@ class mount():
         self.parent = parent
         self.name = name
         self.coordinates  =  SkyCoord(0.0, 0.0, frame='icrs', unit='deg')
-        #self.coordinates_offset  =  SkyCoord(0.0, 0.0, frame='icrs', unit='deg')
         self.coordinates_target  =  SkyCoord(0.0, 0.0, frame='icrs', unit='deg')
-        #self.coordinates_geo    =   SkyCoord(0.0, 0.0, frame='icrs', unit='deg')
         self.coordinates_raw = [0,0]
         self.mountUnit = [1,1]   # kolikrat se musi vynasobit stupne aby to odpovidalo jednotkam montaze
         self.syncOffSet = [0,0]
         self.init_time = time.time()
         self.DayLenght = {'solar': (24.0*60*60), 'sidreal': (23.0*60*60 + 56.0*60 + 4.0916), 'moon':  (24.0*60*60 + 49.0*60), 'custom': (24.0*60*60)}
-
-
+        self._setHorizont()
 
         s_RegisterDriver = rospy.Service('driver/mount/%s' %self.name, arom.srv.DriverControl, self.reset)
 
@@ -201,6 +203,37 @@ class mount():
 
     def getCoordinates(self):    # in degrees
         return self.coordinates
+    
+    def _setHorizont(self, check = True):
+        print self.arg['_horizont']
+        self.horizont_check = check
+        self.horizont = np.array([[0,0], [154,0], [155,45], [160,50], [170,20], [171, 0], [360,0]])
+        self.horizont_hard = np.array([[0,-5], [154,-5], [155,40], [160,45], [170,15], [171,-5], [360,-5]])
+        return self.horizont
+
+    def LimitGuarder(self, loc = None):
+        if loc == None:
+            loc = self.coordinates
+
+        altaz = loc.transform_to(AltAz(obstime = Time.now(), location=self.observatory))
+        F_az = (np.abs(self.horizont[:,0] - altaz.az.degree)).argmin()
+        local_horizont = self.horizont[F_az]
+
+        F_az = (np.abs(self.horizont_hard[:,0] - altaz.az.degree)).argmin()
+        local_horizont_hard = self.horizont_hard[F_az]
+
+        rospy.loginfo("checking Limits: %s Pozice je: %s" %(repr(local_horizont), repr(altaz.to_string('dms'))))
+
+        if altaz.alt.degree < local_horizont_hard[1]:
+            rospy.logerr("TELESCOPE is in the forbidden area (height is %i, horizont: %i, house: %i)" %(altaz.az.degree, local_horizont[1], local_horizont_hard[1]))
+
+        elif altaz.alt.degree < local_horizont[1]:
+            rospy.logerr("TELESCOPE is bellow horizont (height is %i, horizont: %i, house: %i)" %(altaz.az.degree, local_horizont[1], local_horizont_hard[1]))
+
+        else:
+            pass
+
+
 
 
 
@@ -486,6 +519,8 @@ class EQmod(mount):
             ra =  Angle((ra ) / self.mountUnit[0], unit='deg') - Angle( 380*60*60*24 / (time.time() - self.driverSyncTime), unit='deg')
             dec = Angle(0, unit='deg')
             
+            self.LimitGuarder()
+
             try:
                 self.coordinates_instrumental = SkyCoord(ra = ra, dec = dec)
             except Exception, e:
@@ -673,5 +708,5 @@ if __name__ == '__main__':
     for x in config:
         if x['name'] == sys.argv[1]:
             break
-    mount = locals()[x['driver']](arg = x)
+    mount = locals()[x['driver']](arg = x, name = x['name'], port = x['port'])
     #mount = EQmod()
