@@ -2,6 +2,7 @@
 
 import math
 import time
+import datetime
 import rospy
 import std_msgs
 import actionlib
@@ -95,20 +96,64 @@ class i2clcd(UserInteface):
         rospy.wait_for_service('pymlab_drive')
         self.pymlab = rospy.ServiceProxy('pymlab_drive', PymlabDrive)
         rospy.loginfo("%s: >> 'ROSpymlabServer' found" % self.name)
+        self.mode = ['aws', 'ip', 'time']
+        self.mode_id = 0
+        self.mode_count = 0
         
     def run(self):
-        weather = eval(rospy.get_param("weatherStation"))
-        print weather
+        if self.mode_id > len(self.mode)-1:
+            self.mode_id = 0
+
+        if self.mode[self.mode_id] == 'aws':
+            self.mode_count += 1
+            if self.mode_count > 5:
+                self.mode_count = 0
+                self.mode_id +=1
+            weather = eval(rospy.get_param("weatherStation"))
+            print weather
+
+            self.pymlab(device="StatusLCD", method="clear")
+            time.sleep(0.05)
+            self.pymlab(device="StatusLCD", method="home")
+            time.sleep(0.05)
+            self.pymlab(device="StatusLCD", method="puts", parameters="'Tem:%.2fC LTS'" % (float(weather['AWS_LTS_temp'])))
+            self.pymlab(device="StatusLCD", method="set_row2")
+            time.sleep(0.05)
+            self.pymlab(device="StatusLCD", method="puts", parameters="'Hum:%.2fC SHT25'" % (float(weather['AWS_SHT_humi'])))
+
+        elif self.mode[self.mode_id] == 'ip':
+            self.mode_count += 1
+            if self.mode_count > 2:
+                self.mode_count = 0
+                self.mode_id +=1
+
+            if self.mode_count == 0:
+                self.pymlab(device="StatusLCD", method="clear")
+                time.sleep(0.05)
+                self.pymlab(device="StatusLCD", method="home")
+                time.sleep(0.05)
+                self.pymlab(device="StatusLCD", method="puts", parameters="'%s'" % ("telescopeC"))
+                self.pymlab(device="StatusLCD", method="set_row2")
+                time.sleep(0.05)
+                self.pymlab(device="StatusLCD", method="puts", parameters="'%s'" % ("127.0.0.1"))
 
 
-        self.pymlab(device="StatusLCD", method="clear")
-        time.sleep(0.05)
-        self.pymlab(device="StatusLCD", method="home")
-        time.sleep(0.05)
-        self.pymlab(device="StatusLCD", method="puts", parameters="'Tem:%.2fC LTS'" % (float(weather['AWS_LTS_temp'])))
-        self.pymlab(device="StatusLCD", method="set_row2")
-        time.sleep(0.05)
-        self.pymlab(device="StatusLCD", method="puts", parameters="'Hum:%.2fC SHT25'" % (float(weather['AWS_SHT_humi'])))
+
+        elif self.mode[self.mode_id] == 'time':
+            self.mode_count += 1
+            if self.mode_count > 5:
+                self.mode_count = 0
+                self.mode_id +=1
+
+            self.pymlab(device="StatusLCD", method="clear")
+            time.sleep(0.05)
+            self.pymlab(device="StatusLCD", method="home")
+            time.sleep(0.05)
+            self.pymlab(device="StatusLCD", method="puts", parameters="'%s'" % (datetime.datetime.now().strftime("%Y-%m-%d")))
+            self.pymlab(device="StatusLCD", method="set_row2")
+            time.sleep(0.05)
+            self.pymlab(device="StatusLCD", method="puts", parameters="'%s'" % (datetime.datetime.now().strftime("%H:%M:%S")))
+
 
 
 

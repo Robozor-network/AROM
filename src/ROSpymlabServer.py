@@ -100,11 +100,19 @@ class pymlab_server():
         parameters = cfg.parameters
         method = cfg.method
         device = cfg.device
-        if parameters == "" or parameters == None:
-            reval = getattr(self.devices[cfg.device], cfg.method)()
-        else:
-            reval = getattr(self.devices[cfg.device], cfg.method)(eval(parameters))
-        return str(reval)
+        while self.pymlab_read: pass
+        self.pymlab_read = True
+        try:
+            if parameters == "" or parameters == None:
+                reval = getattr(self.devices[cfg.device], cfg.method)()
+            else:
+                reval = getattr(self.devices[cfg.device], cfg.method)(eval(parameters))
+            self.pymlab_read = False
+            return str(reval)
+        except Exception, e:
+            rospy.logerr(e)
+            self.pymlab_read = False
+            return str(False)
 
 
 def main():

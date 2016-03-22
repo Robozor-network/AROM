@@ -114,7 +114,23 @@ class mount():
             self.coordinates_target = SkyCoord(ra = float(data['ra']), dec = float(data['dec']), unit = 'deg')
             self.newTarget = 1
             rospy.loginfo("Souradnice nastaveny na: %s Aktualni jsou: %s Jejich rozdil je %s..." %(self.coordinates_target.to_string('dms') , self.coordinates.to_string('dms') ,self.coordinates.position_angle(self.coordinates_target).to_string() ))
-            #self.setTarget([data['ra'], data['dec']], unit='deg')
+            return arom.srv.DriverControlRespond(done = True, data = "{'ra':"+str(self.coordinates_target.ra.degree)+"'ra':"+str(self.coordinates_target.dec.degree)+"}")
+        elif msg.type == 'Stop':
+            rospy.logerr("mount stop jeste neni implementovan")
+            pass
+        elif msg.type == 'Sync':
+            rospy.logerr("mount sync jeste neni implementovan")
+            pass
+        elif msg.type == 'getPosition':
+            rospy.logerr("mount sync jeste neni implementovan")
+            return arom.srv.DriverControlRespond(done = True, data = "{'ra':"+str(self.coordinates.ra.degree)+"'ra':"+str(self.coordinates.dec.degree)+"}")
+        else:
+            try:
+                out = argv(self, msg.type)(data)
+                return arom.srv.DriverControlRespond(done = True, data = repr(out))
+            except Exception, e:
+                rospy.logerr(e)
+            rospy.logerr("Zprava '%s' je neznama" %(repr(msg.type)))
 
     def MountParameter(self, MountParameter = None):
         rospy.loginfo('%s: GetNewParameters: %s' %(self.name, MountParameter))

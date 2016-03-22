@@ -1,7 +1,7 @@
 [
     {
         "type": "mount",
-        "name": "mount_montaz",
+        "name": "heq5",
         "driver": "EQmod",
         "port": "/dev/ttyUSB0",
         "_park": false,
