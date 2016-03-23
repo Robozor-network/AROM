@@ -20,6 +20,7 @@ from astropy.coordinates import Angle
 from astropy.coordinates import EarthLocation
 from astropy.coordinates import AltAz
 from astropy.time import Time
+from astropy.time import TimeDelta
 
 
 
@@ -36,12 +37,16 @@ class mount():
         self.port = port
         self.parent = parent
         self.name = name
-        self.coordinates  =  SkyCoord(0.0, 0.0, frame='icrs', unit='deg')
+        if rospy.get_param('heq5/restoreloc', None):
+            self.coordinates = SkyCoord(rospy.get_param('heq5/restoreloc'), unit='deg', obstime = Time.now(), frame = 'altaz', location = self.observatory).icrs
+            rospy.loginfo("restoring saved position %s" %(repr(self.coordinates)))
+        else:
+            self.coordinates = SkyCoord(0.0, 0.0, frame='icrs', unit='deg')
         self.coordinates_target  =  SkyCoord(0.0, 0.0, frame='icrs', unit='deg')
         self.coordinates_raw = [0,0]
         self.mountUnit = [1,1]   # kolikrat se musi vynasobit stupne aby to odpovidalo jednotkam montaze
         self.syncOffSet = [0,0]
-        self.init_time = time.time()
+        self.init_time = Time.now()
         self.DayLenght = {'solar': (24.0*60*60), 'sidreal': (23.0*60*60 + 56.0*60 + 4.0916), 'moon':  (24.0*60*60 + 49.0*60), 'custom': (24.0*60*60)}
         self._setHorizont()
 
@@ -97,6 +102,7 @@ class mount():
 
         rare = rospy.Rate(2)
         while not rospy.is_shutdown():
+            self.update()
             slew_err = 0.01
             #if abs(self.coordinates.ra.degree - self.coordinates_target.ra.degree) > slew_err or abs(self.coordinates.dec.degree - self.coordinates_target.dec.degree) > slew_err:# and not self.slewing:
             if self.newTarget:# and not self.slewing:
@@ -105,6 +111,9 @@ class mount():
             self.getPosition()
             rospy.loginfo("loc: %s Cyba: %f" %(str(self.coordinates.to_string('dms')), self.coordinates.position_angle(self.coordinates_target).degree))
             rare.sleep()
+        
+        self.stop()
+        rospy.set_param('heq5/restoreloc', self.coordinates.transform_to(AltAz(obstime = Time.now(), location=self.observatory)).to_string('dms'))
 
 
     def reset(self, msg):
@@ -217,8 +226,12 @@ class mount():
         self.coordinates_target = SkyCoord(coordinates[0], coordinates[1], frame='icrs', unit=unit)
         return self.coordinates_target
 
-    def getCoordinates(self):    # in degrees
-        return self.coordinates
+    def getCoordinates(self, mode = 'radec'):    # in degrees
+        if self.tracking:
+            return self.coordinates
+        else:
+            return self.coordinates_altaz
+
     
     def _setHorizont(self, check = True):
         print self.arg['_horizont']
@@ -299,12 +312,12 @@ class EQmod(mount):
         self.Axis2='2'       # DE/ALT
         self.AxRa=0          # RA/AZ
         self.AxDec=1         # DE/ALT
-        self.AxisTick = 16777215.0
         self.DayLenght = {'solar': (24.0*60*60), 'sideral': (23.0*60*60 + 56.0*60 + 4.0916), 'moon':  (24.0*60*60 + 49.0*60), 'custom': (24.0*60*60)}
         self.coordinates = [0,0]
         self.coordinates_instrumental = [0,0]
         self.syncOffSet = [0,0]
-        self.driverSyncTime = time.time()
+        self.driverSyncTime = Time.now()
+        self.coord_instrument_old = (0,0,Time.now())
 
         ##
         ##  Registrace ovladace jako mount
@@ -312,16 +325,16 @@ class EQmod(mount):
 
 
     def _axisPosToDeg(self, loc, ax=0):
-        return loc / self.stepsPerRev[ax+1]/360.0
+        return loc / self.stepsPerRev[ax]/360.0
 
     def _axisPosToReal(self, loc, ax=0):
-        return loc / self.stepsPerRev[ax+1]/360.0 + self.syncOffSet[ax]
+        return loc / self.stepsPerRev[ax]/360.0 + self.syncOffSet[ax]
 
     def _degToAxis(self, loc, ax=0):
-        return loc * self.stepsPerRev[ax+1]/360.0
+        return loc * self.stepsPerRev[ax]/360.0
 
     def _degRealToAxis(self, loc, ax=0):
-        return loc * self.stepsPerRev[ax+1]/360.0 + self.syncOffSet[ax]
+        return loc * self.stepsPerRev[ax]/360.0 + self.syncOffSet[ax]
 
     def connect(self, port="/dev/ttyUSB0"):
         print "connect > start"
@@ -396,11 +409,19 @@ class EQmod(mount):
         self.getPosition()
         #self.syncOffSet = self.coordinates
 
+        self.coord_instrument_old = (0,self.stepsPerRev[1]/2,Time.now())
+
+
 
     def slew(self, target = [None, None], unit = 'deg'):
         if target[0] != None and target[1] != None:
             self.coordinates_target = SkyCoord(int(target[0]), int(target[1]), unit = unit)
             self.setPosition()
+
+    def stop(self):
+        self.tracking = False
+        self._GetData(self.NotInstantAxisStop, self.Axis1,)
+        self._GetData(self.NotInstantAxisStop, self.Axis2,)
 
     def _GetData(self, cmd, axis, param = None, max_time = 10):
         SkywatcherLeadingChar = ':'
@@ -435,6 +456,13 @@ class EQmod(mount):
 
     def ReciveTarget(self, target = None):
         rospy.loginfo("RecivedNewTarget %s" %(repr(target)))
+
+    def setTimeMachine(self, on=None, mode=None):
+        if on != None:
+            self.tracking = on
+        if mode != None:
+            self.trackingMode = target
+        update()
 
     def setPosition(self, param = None):
         try:
@@ -532,7 +560,7 @@ class EQmod(mount):
             ra = self.Revu24str2long(raw)
             dec = self.Revu24str2long(decw)
 
-            ra =  Angle((ra ) / self.mountUnit[0], unit='deg') - Angle( 380*60*60*24 / (time.time() - self.driverSyncTime), unit='deg')
+            ra =  Angle((ra ) / self.mountUnit[0], unit='deg') - Angle( 380*60*60*24 / (Time.now() - self.driverSyncTime).sec, unit='deg')
             dec = Angle(0, unit='deg')
             
             self.LimitGuarder()
@@ -589,6 +617,37 @@ class EQmod(mount):
         else:
             pass
 
+    def sync(self, coordinates = None):
+        rospy.logerr("sync is not implemented >> NotImplementedError")
+
+    def update(self, correction = False):
+        old_ax1, old_ax2, old_time = self.coord_instrument_old
+        coordinater = self.coordinates
+        cas = Time.now()
+        
+        difference_time = cas - old_time
+
+        if difference_time.sec > 30:
+            rawRA = self._GetData(self.GetAxisPosition, self.Axis1)
+            rawDEC= self._GetData(self.GetAxisPosition, self.Axis2)
+
+            ax1 = self.Revu24str2long(rawRA)
+            ax2 = self.Revu24str2long(rawDEC)
+
+            difference_ax1 = ax1 - old_ax1
+            difference_ax2 = ax2 - old_ax2
+
+            rospy.loginfo("Update, ")
+
+            predpokladRa = (self.stepsPerRev[0]/self.DayLenght['sidreal']) * difference_time.sec
+
+            rospy.logerr("rozdil predpokladu a aktualni pozici je %i" %(difference_ax1 - predpokladRa))
+
+        if difference_time.sec > 30:
+            self.coord_instrument_old = ax1, ax2, cas
+
+        #if abs(difference_ax1 - predpokladRa) > 100:
+        #    print "> 100"
 
     def Revu24str2long(self, s):
         s = str(s)[1:-1]
