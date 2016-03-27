@@ -100,9 +100,11 @@ class AWS01B(weatherStation):
 
 
     def mesure(self):
-        self.variables['AWS_LTS_temp'] = self.pymlab(device="AWS_temp", method="get_temp", parameters=None).value
-        self.variables['AWS_SHT_temp'] = self.pymlab(device="AWS_humi", method="get_temp_8bit", parameters=None).value
-        self.variables['AWS_SHT_humi'] = self.pymlab(device="AWS_humi", method="get_hum_8bit", parameters=None).value
+        self.variables['AWS_LTS_temp'] = eval(self.pymlab(device="sht25", method="get_temp", parameters=None).value)
+        TempHum = eval(self.pymlab(device="AWS_humi", method="get_TempHum", parameters=None).value)
+        print TempHum
+        self.variables['AWS_AMBIENT_temp'] = TempHum[0]
+        self.variables['AWS_AMBIENT_humi'] = TempHum[1]
         print self.variables
         rospy.set_param("weatherStation", str(self.variables))
         
