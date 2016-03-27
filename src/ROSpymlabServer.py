@@ -20,28 +20,26 @@ def server(req):
 class pymlab_server():
     def __init__(self):
         self.pymlab_read = False # slouzi k ochrane pymlabu pred pokusem o dve cteni zaroven ...
+        self.devices = {}
+
 
     def init(self, cfg=None):
         self.status = False
         self.init = cfg
         self.cfg_i2c = eval(cfg.i2c)
         self.cfg_bus = eval(cfg.bus)
-        self.devices = {}
-        Local_devices = {}
-        rospy.loginfo("configuracni soubor: %s" %str(cfg))
-        i2c = {
-                "port": 1,
-            }
-        bus = [
-                    {
-                        "name":           "lts01",
-                        "type":           "lts01",
-                    },
-                ]
+        rospy.loginfo("konfiguracni data: %s" %str(cfg))
+
         self.pymlab_config = config.Config(i2c = self.cfg_i2c, bus = self.cfg_bus)
         self.pymlab_config.initialize()
         for x in self.cfg_bus:
+            try:
+                self.devices[x['name']] = self.pymlab_config.get_device(x['name'])
+            except Exception, e:
+                rospy.logerr(e)
+            print x['name'], 
             self.devices[x['name']] = self.pymlab_config.get_device(x['name'])
+            print self.devices[x['name']]
         rospy.set_param("devices", str(self.devices))
         rospy.loginfo("self.device: %s" %str(self.devices))
 
@@ -67,6 +65,7 @@ class pymlab_server():
             self.AutoInputs = ecfg['AutoInputs']
             rospy.set_param("AutoInputs", str(self.AutoInputs))
         if "start" in ecfg:
+            rospy.loginfo("Starting PYMLAB ROS servre with: %s" %(repr(self.devices)))
             self.status = True
             rate = rospy.Rate(self.rate)
             AutoInputs = self.AutoInputs

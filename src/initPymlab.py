@@ -14,20 +14,38 @@ from sensor_server.msg import *
 
 if __name__ == "__main__":
     i2c = str({
+            "device": "hid",
             "port": 1,
         })
     bus = str([
                 {
-                    "name":           "AWS_temp",
-                    "type":           "lts01",
-                },
-                {
                     "name":           "AWS_humi",
-                    "type":           "sht25",
+                    "type":           "sht31",
+                },{
+                    "name":           "AWS_wind_s",
+                    "type":           "rps01",
                 },{
                     "name":           "StatusLCD",
                     "type":           "i2clcd",
-                },
+                },{
+                    "name":           "AWS_temp_in",
+                    "type":           "lts01",
+                }#,{
+                #    "name":           "io",
+                #    "type":           "i2cio",
+                #}
+
+            ])
+
+    i2c2 = str({
+            "device": "smbus",
+            "port": 1,
+        })
+    bus2 = str([
+                {
+                    "name":           "sht25",
+                    "type":           "sht25"
+                }
 
             ])
 
@@ -37,6 +55,7 @@ if __name__ == "__main__":
 
     pymlab = rospy.ServiceProxy('pymlab_init', PymlabInit)
     print pymlab(i2c=i2c, bus=bus)
+    print pymlab(i2c=i2c2, bus=bus2)
     
     msg_pymlab.publish(name = "", data="{'rate': 0.01, 'start': True, 'AutoInputs': {}}")
 

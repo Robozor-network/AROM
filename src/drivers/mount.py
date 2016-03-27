@@ -89,6 +89,7 @@ class mount():
         ##
 
         self.s_MountParameters = rospy.Service('arom/mount/parameter', arom.srv.MountParameter, self.MountParameter)
+        self.pub_mount_position = rospy.Publisher('arom/mount/location', String, queue_size=10)
 
         ##
         ##  Vytvoreni subsribera na prijimani dat
@@ -100,17 +101,19 @@ class mount():
         ##  Ovladac pujde ukoncit
         ##
 
-        rare = rospy.Rate(2)
+        rate = rospy.Rate(2)
         while not rospy.is_shutdown():
             self.update()
             slew_err = 0.01
             #if abs(self.coordinates.ra.degree - self.coordinates_target.ra.degree) > slew_err or abs(self.coordinates.dec.degree - self.coordinates_target.dec.degree) > slew_err:# and not self.slewing:
             if self.newTarget:# and not self.slewing:
-                rospy.loginfo("Chyba namireni je %i a %i" %((self.coordinates.ra.degree - self.coordinates_target.ra.degree), abs(self.coordinates.dec.degree - self.coordinates_target.dec.degree)))
+                #rospy.loginfo("Chyba namireni je %i a %i" %((self.coordinates.ra.degree - self.coordinates_target.ra.degree), abs(self.coordinates.dec.degree - self.coordinates_target.dec.degree)))
                 self.setPosition()
             self.getPosition()
-            rospy.loginfo("loc: %s Cyba: %f" %(str(self.coordinates.to_string('dms')), self.coordinates.position_angle(self.coordinates_target).degree))
-            rare.sleep()
+            self.pub_mount_position.publish("%f;%f;%s;%s;" %(self.coordinates.ra.degree, self.coordinates.dec.degree, self.coordinates_altaz.alt.degree, self.coordinates_altaz.az.degree))
+            #rospy.loginfo("loc: %s Cyba: %f" %(str(self.coordinates.to_string('dms')), self.coordinates.position_angle(self.coordinates_target).degree))  
+            #rospy.set_param('heq5/location', self.coordinates.to_string('dms'))
+            rate.sleep()
         
         self.stop()
         rospy.set_param('heq5/restoreloc', self.coordinates.transform_to(AltAz(obstime = Time.now(), location=self.observatory)).to_string('dms'))
@@ -645,6 +648,8 @@ class EQmod(mount):
 
         if difference_time.sec > 30:
             self.coord_instrument_old = ax1, ax2, cas
+
+        self.coordinates_altaz = self.coordinates.transform_to(AltAz(obstime = Time.now(), location=self.observatory))
 
         #if abs(difference_ax1 - predpokladRa) > 100:
         #    print "> 100"
