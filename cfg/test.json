@@ -1,12 +1,18 @@
 [
+	{
+		"type": "observatory",
+		"name": "telescopeC",
+		"database": "db_arom",
+		"lat": 48.98706,
+		"lon": 14.4745,
+		"alt": 390,
+		"mode": 0
+	},
     {
         "type": "mount",
         "name": "heq5",
         "driver": "EQmod",
         "port": "/dev/ttyUSB0",
-        "_park": false,
-        "_park_location": [0,90],
-        "_last_coord": [0,0],
         "_horizont": "/home/odroid/robozor/src/arom/cfg/ZVPP_limit.svg"
     },
     {
