@@ -36,7 +36,7 @@
     },
     {
         "type": "weatherStation",
-        "name": "ws_AWS",
+        "name": "aws",
         "driver": "AWS01B"
     },
     {

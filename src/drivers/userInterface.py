@@ -103,6 +103,13 @@ class i2clcd(UserInteface):
     def run(self):
         if self.mode_id > len(self.mode)-1:
             self.mode_id = 0
+            try:
+                self.pymlab(device="StatusLCD", method="reset")
+                time.sleep(0.05)
+                self.pymlab(device="StatusLCD", method="init")
+                time.sleep(0.05)
+            except Exception, e:
+                rospy.logerr(e)
 
         try:
             if self.mode[self.mode_id] == 'aws':

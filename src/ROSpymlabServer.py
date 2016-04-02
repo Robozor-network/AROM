@@ -80,6 +80,7 @@ class pymlab_server():
             rospy.set_param("values", values)
            # print "\n run \n\n"
             while True:
+                '''
                 print "\r",
                 for x in AutoInputs:
                     for y in AutoInputs[x]:
@@ -91,6 +92,7 @@ class pymlab_server():
                         sender.publish(name=str(devices[x].name)+"/"+str(y), value=data)
                         #senderTest.publish(data)
                 print "\r",
+                '''
                 rate.sleep()
             return True
 
@@ -99,7 +101,7 @@ class pymlab_server():
         parameters = cfg.parameters
         method = cfg.method
         device = cfg.device
-        while self.pymlab_read: pass
+        while self.pymlab_read: time.sleep(0.01)
         self.pymlab_read = True
         try:
             if parameters == "" or parameters == None:

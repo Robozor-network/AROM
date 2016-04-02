@@ -72,8 +72,11 @@ class weatherStation(object):
 
         rate = rospy.Rate(0.1)
         while not rospy.is_shutdown():
-            data = self.mesure()
-            self.datalog(data)
+            try:
+                data = self.mesure()
+                self.datalog(data)
+            except Exception, e:
+                rospy.logerr(e)
             rate.sleep()
 
 
@@ -144,20 +147,20 @@ class AWS01B(weatherStation):
 
         if self.last_wind_mes + 10 * u.s < Time.now():
             angles = np.zeros(5)
-            angles[4] = eval(self.pymlab(device="AWS_wind_s", method="get_angle", parameters='verify = False').value)
+            angles[4] = eval(self.pymlab(device="AWS_wind_s", method="get_angle", parameters='').value)
             time.sleep(0.01)
-            angles[3] = eval(self.pymlab(device="AWS_wind_s", method="get_angle", parameters='verify = False').value)
+            angles[3] = eval(self.pymlab(device="AWS_wind_s", method="get_angle", parameters='').value)
             time.sleep(0.01)
-            angles[2] = eval(self.pymlab(device="AWS_wind_s", method="get_angle", parameters='verify = False').value)
+            angles[2] = eval(self.pymlab(device="AWS_wind_s", method="get_angle", parameters='').value)
             time.sleep(0.01)
-            angles[1] = eval(self.pymlab(device="AWS_wind_s", method="get_angle", parameters='verify = False').value)
+            angles[1] = eval(self.pymlab(device="AWS_wind_s", method="get_angle", parameters='').value)
             n = 0
             speed = 0
-            AVERAGING = 10
+            AVERAGING = 50
 
             for i in range(AVERAGING):
                 time.sleep(0.01)
-                angles[0] = eval(self.pymlab(device="AWS_wind_s", method="get_angle", parameters='verify = False').value)
+                angles[0] = eval(self.pymlab(device="AWS_wind_s", method="get_angle", parameters='').value)
                 
                 if (angles[0] + n*360 - angles[1]) > 300:
                     n -= 1
@@ -173,7 +176,7 @@ class AWS01B(weatherStation):
                 speed += (-angles[4] + 8*angles[3] - 8*angles[1] + angles[0])/12
                 angles = np.roll(angles, 1)
 
-            speed = speed/AVERAGING             # apply averaging on acummulated value.
+            #speed = speed/AVERAGING             # apply averaging on acummulated value.
             
             self.last_wind_mes = Time.now()
             return [{'value':AWS_LTS_temp, 'name':'AWS_telescope_temp_lts', 'guantity': 'C', 'time': Time.now().unix},

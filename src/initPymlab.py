@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     pymlab = rospy.ServiceProxy('pymlab_init', PymlabInit)
     print pymlab(i2c=i2c, bus=bus)
-    print pymlab(i2c=i2c2, bus=bus2)
+    #print pymlab(i2c=i2c2, bus=bus2)
     
     msg_pymlab.publish(name = "", data="{'rate': 0.01, 'start': True, 'AutoInputs': {}}")
 
