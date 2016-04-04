@@ -135,7 +135,8 @@ class AWS01B(weatherStation):
 
 
     def mesure(self):
-        AWS_LTS_temp = eval(self.pymlab(device="sht25", method="get_temp", parameters=None).value)
+        AWS_LTS_temp = eval(self.pymlab(device="sht25", method="get_temp_8bit", parameters=None).value)
+        #AWS_LTS_hum = eval(self.pymlab(device="sht25", method="get_hum_8bit", parameters=None).value)
         self.variables['AWS_LTS_temp'] = AWS_LTS_temp
         TempHum = eval(self.pymlab(device="AWS_humi", method="get_TempHum", parameters=None).value)
         #print TempHum

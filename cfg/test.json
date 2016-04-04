@@ -13,7 +13,8 @@
         "name": "heq5",
         "driver": "EQmod",
         "port": "/dev/ttyUSB0",
-        "_horizont": "/home/odroid/robozor/src/arom/cfg/ZVPP_limit.svg"
+        "_horizont": "/home/odroid/robozor/src/arom/cfg/ZVPP_limit.svg",
+        "param": "/home/odroid/robozor/src/arom/cfg/mount.add"
     },
     {
         "type": "telescope",
@@ -25,8 +26,12 @@
     {
         "type": "camera",
         "name": "cam_camera",
+        "civil_name": "Foťák EOS",
         "parent": "dalekohled",
-        "driver": "camera.gphoto"
+        "port": "",
+        "driver": "gphoto",
+        "_local_storage": "/home/odroid/capture/",
+        "_path_structure": "std"
     },
     {
         "type": "focuser",

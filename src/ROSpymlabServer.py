@@ -8,6 +8,7 @@ import sensor_server
 from std_msgs.msg import String
 from std_msgs.msg import Float32
 import std_msgs
+import time
 from sensor_server.srv import *
 from sensor_server.msg import *
 
@@ -97,10 +98,10 @@ class pymlab_server():
             return True
 
     def drive(self, cfg):
-        print cfg
         parameters = cfg.parameters
         method = cfg.method
         device = cfg.device
+        print "parameters '%s', method '%s', device '%s'" %(cfg.parameters, cfg.method, cfg.device)
         while self.pymlab_read: time.sleep(0.01)
         self.pymlab_read = True
         try:

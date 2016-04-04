@@ -59,7 +59,7 @@ class mount():
         rospy.init_node('AROM_mount')
         rospy.loginfo("%s: wait_for_service: 'arom/RegisterDriver'" % self.name)
         rospy.wait_for_service('arom/RegisterDriver')
-        rospy.loginfo("%s: >> brain found" % self.name)
+        rospy.logdebug("%s: >> brain found" % self.name)
 
         ##
         ##  Registrace zarizeni
@@ -122,20 +122,21 @@ class mount():
     def reset(self, msg):
         rospy.loginfo(msg)
         data = eval(msg.data)
+        rospy.logerr(repr(msg.type))
         if msg.type == 'Slew':
             self.coordinates_target = SkyCoord(ra = float(data['ra']), dec = float(data['dec']), unit = 'deg')
             self.newTarget = 1
-            rospy.loginfo("Souradnice nastaveny na: %s Aktualni jsou: %s Jejich rozdil je %s..." %(self.coordinates_target.to_string('dms') , self.coordinates.to_string('dms') ,self.coordinates.position_angle(self.coordinates_target).to_string() ))
-            return arom.srv.DriverControlRespond(done = True, data = "{'ra':"+str(self.coordinates_target.ra.degree)+"'ra':"+str(self.coordinates_target.dec.degree)+"}")
+            rospy.logdebug("Souradnice nastaveny na: %s Aktualni jsou: %s Jejich rozdil je %s..." %(self.coordinates_target.to_string('dms') , self.coordinates.to_string('dms') ,self.coordinates.position_angle(self.coordinates_target).to_string() ))
+            #return arom.srv.DriverControlRespond(done = True, data = "{'ra':"+str(self.coordinates_target.ra.degree)+"'ra':"+str(self.coordinates_target.dec.degree)+"}")
         elif msg.type == 'Stop':
             rospy.logerr("mount stop jeste neni implementovan")
             pass
         elif msg.type == 'Sync':
-            rospy.logerr("mount sync jeste neni implementovan")
-            pass
+            self.sync(SkyCoord(ra = float(data['ra']), dec = float(data['dec']), unit = 'deg'))
+            
         elif msg.type == 'getPosition':
             rospy.logerr("mount sync jeste neni implementovan")
-            return arom.srv.DriverControlRespond(done = True, data = "{'ra':"+str(self.coordinates.ra.degree)+"'ra':"+str(self.coordinates.dec.degree)+"}")
+            #return arom.srv.DriverControlRespond(done = True, data = "{'ra':"+str(self.coordinates.ra.degree)+"'ra':"+str(self.coordinates.dec.degree)+"}")
         else:
             try:
                 out = argv(self, msg.type)(data)
@@ -176,11 +177,12 @@ class mount():
         
     def slew(self, param = None):
         raise NotImplementedError()
+    
+    def sync(self, param = None):
+        self.coordinates = param
+        self.coordinates_target = param
 
     def track(self, param = None):
-        raise NotImplementedError()
-
-    def slew(self, param = None):
         raise NotImplementedError()
 
     def setPosition(self, param = None):
@@ -254,7 +256,7 @@ class mount():
         F_az = (np.abs(self.horizont_hard[:,0] - altaz.az.degree)).argmin()
         local_horizont_hard = self.horizont_hard[F_az]
 
-        rospy.loginfo("checking Limits: %s Pozice je: %s" %(repr(local_horizont), repr(altaz.to_string('dms'))))
+        rospy.logdebug("checking Limits: %s Pozice je: %s" %(repr(local_horizont), repr(altaz.to_string('dms'))))
 
         if altaz.alt.degree < local_horizont_hard[1]:
             rospy.logerr("TELESCOPE is in the forbidden area (height is %i, horizont: %i, house: %i)" %(altaz.az.degree, local_horizont[1], local_horizont_hard[1]))
@@ -448,7 +450,7 @@ class EQmod(mount):
             if len(data) > 0:
                 pass
             if ("#" in data) or ("=" in data) or ("!" in data):
-                rospy.loginfo("Recived data:\t \t >>> %s" %(repr(data)))
+                rospy.logdebug("Recived data:\t \t >>> %s" %(repr(data)))
                 break
             time.sleep(0.05)
 
@@ -619,9 +621,6 @@ class EQmod(mount):
                 DEStatus.speedmode=LOWSPEED
         else:
             pass
-
-    def sync(self, coordinates = None):
-        rospy.logerr("sync is not implemented >> NotImplementedError")
 
     def update(self, correction = False):
         old_ax1, old_ax2, old_time = self.coord_instrument_old

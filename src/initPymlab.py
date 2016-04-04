@@ -25,9 +25,6 @@ if __name__ == "__main__":
                     "name":           "AWS_wind_s",
                     "type":           "rps01",
                 },{
-                    "name":           "StatusLCD",
-                    "type":           "i2clcd",
-                },{
                     "name":           "AWS_temp_in",
                     "type":           "lts01",
                 }#,{
@@ -45,6 +42,9 @@ if __name__ == "__main__":
                 {
                     "name":           "sht25",
                     "type":           "sht25"
+                },{
+                    "name":           "StatusLCD",
+                    "type":           "i2clcd",
                 }
 
             ])
@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     pymlab = rospy.ServiceProxy('pymlab_init', PymlabInit)
     print pymlab(i2c=i2c, bus=bus)
-    #print pymlab(i2c=i2c2, bus=bus2)
+    print pymlab(i2c=i2c2, bus=bus2)
     
     msg_pymlab.publish(name = "", data="{'rate': 0.01, 'start': True, 'AutoInputs': {}}")
 
