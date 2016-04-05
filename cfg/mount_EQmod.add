@@ -1,0 +1,32 @@
+<devGroup group="Telescopes">
+	<device label="EQMod">
+		<driver name="EQMod Mount">indi_eqmod_telescope</driver>
+                <version>0.2</version>
+	</device>
+</devGroup>
+
+<device type="mount" driver="EQmod" label="Mount"> 
+	<driver name="EQmod">AROM EQmode driver</driver>
+	<paramGroup name="general" label="Main Control">
+		<parNumber name="ALT" label="Altitude" text="%10.6f" min="-90.0" max="90.0"  step="0.0" unit="dms">0</parNumber>
+		<parNumber name="AZ"  label="Azimuth"  text="%10.6f" min="0.0"   max="360.0" step="0.0" unit="dms">0</parNumber>
+
+		<parNumber name="RA"  label="Right asc"   text="%10.6f" min="-90.0" max="90.0"  step="0.0" unit="dms">0</parNumber>
+		<parNumber name="DEC" label="Declination" text="%10.6f" min="0.0"   max="360.0" step="0.0" unit="dms">0</parNumber>
+
+		<parSwitch name="TrackingMode"   label="TrackingRate" text="%s" values="['Own', 'Sidereal', 'Solar', 'Lunar']">1</parNumber>
+		<parNumber name="TrackingOwnRa"  label="TrackingSpeedRa" text="%10.6f" min="0.0"  max="360.0" step="0.0" unit="as/s">0</parNumber>
+		<parNumber name="TrackingOwnDec" label="TrackingSpeedDec" text="%10.6f" min="0.0"  max="360.0" step="0.0" unit="as/s">0</parNumber>
+	</paramGroup>
+	<paramGroup name="general" label="Mount">
+		<parNumber name="RA" label="Altitude" text="%10.6f" min="-90.0" max="90.0"  step="0.0" unit="dms">0</parNumber>
+		<parNumber name="AZ"  label="Azimuth"  text="%10.6f" min="0.0"   max="360.0" step="0.0" unit="dms">0</parNumber>
+
+		<parNumber name="RA"  label="Right asc"   text="%10.6f" min="-90.0" max="90.0"  step="0.0" unit="dms">0</parNumber>
+		<parNumber name="DEC" label="Declination" text="%10.6f" min="0.0"   max="360.0" step="0.0" unit="dms">0</parNumber>
+
+		<parSwitch name="TrackingMode"   label="TrackingRate" text="%s" values="['Own', 'Sidereal', 'Solar', 'Lunar']">1</parNumber>
+		<parNumber name="TrackingOwnRa"  label="TrackingSpeedRa" text="%10.6f" min="0.0"  max="360.0" step="0.0" unit="as/s">0</parNumber>
+		<parNumber name="TrackingOwnDec" label="TrackingSpeedDec" text="%10.6f" min="0.0"  max="360.0" step="0.0" unit="as/s">0</parNumber>
+	</paramGroup>
+</device>

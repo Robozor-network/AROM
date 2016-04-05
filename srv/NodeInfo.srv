@@ -1,0 +1,12 @@
+##
+##  Slouzi pro ziskani dat z AROM_brainu
+##
+
+string type
+string name
+string data
+string check
+---
+string type
+string data
+bool done

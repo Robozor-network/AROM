@@ -2,6 +2,7 @@ string name
 string sname
 string driver
 string device
+string service
 bool status
 string error
 bool connect = 1

@@ -1,8 +1,14 @@
+#
+# Slouzi pro komunikaci s ovladacema
+#
 string name
+string type
 string data
 string validate
 string check
-bool type
+bool done
 ---
+string name
+string type
 string data
 bool done

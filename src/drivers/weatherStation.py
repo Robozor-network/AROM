@@ -22,7 +22,8 @@ class weatherStation(object):
         self.Autoconnect = connect
         self.port = port
         self.parent = parent
-        self.name = name
+        self.name = self.arg['name']
+        self.sname = self.name
         self.variables = var
         
         ##
@@ -55,7 +56,7 @@ class weatherStation(object):
         ##
 
         RegisterDriver = rospy.ServiceProxy('arom/RegisterDriver', arom.srv.RegisterDriver)
-        registred = RegisterDriver(name = self.name, sname= self.name, driver = 'AWS01A', device = 'weatherStation', status = 1)
+        registred = RegisterDriver(name = self.name, sname = self.name, driver = self.arg['driver'], device = self.arg['type'], service = 'arom/driver/%s/%s' %(self.arg['type'], self.name), status = 1)
         rospy.loginfo("%s: >> register %s driver: %s" %(self.name, 'AWS01A', registred))
 
 

@@ -31,12 +31,19 @@ class mount():
         self.newTarget = 0
         self.init()
         self.slewing = False
-        self.tracking = True
+        self.tracking = False
         self.trackingMode = 'sidreal'
         self.Autoconnect = connect
         self.port = port
         self.parent = parent
-        self.name = name
+        self.name = self.arg['name']
+        self.sname = self.name
+
+##
+##  Vlastni inicizalizace
+
+        self.init()
+
         if rospy.get_param('heq5/restoreloc', None):
             self.coordinates = SkyCoord(rospy.get_param('heq5/restoreloc'), unit='deg', obstime = Time.now(), frame = 'altaz', location = self.observatory).icrs
             rospy.loginfo("restoring saved position %s" %(repr(self.coordinates)))
@@ -50,58 +57,48 @@ class mount():
         self.DayLenght = {'solar': (24.0*60*60), 'sidreal': (23.0*60*60 + 56.0*60 + 4.0916), 'moon':  (24.0*60*60 + 49.0*60), 'custom': (24.0*60*60)}
         self._setHorizont()
 
-        s_RegisterDriver = rospy.Service('driver/mount/%s' %self.name, arom.srv.DriverControl, self.reset)
-
-        ##
-        ##  Ceka to na spusteni AROMbrain nodu
-        ##
-
+                                                                                                ##  Ceka to na spusteni AROMbrain nodu
         rospy.init_node('AROM_mount')
-        rospy.loginfo("%s: wait_for_service: 'arom/RegisterDriver'" % self.name)
-        rospy.wait_for_service('arom/RegisterDriver')
+        rospy.loginfo("%s: wait_for_service: '/arom/RegisterDriver'" % self.name)
+        rospy.wait_for_service('/arom/RegisterDriver')
         rospy.logdebug("%s: >> brain found" % self.name)
 
-        ##
-        ##  Registrace zarizeni
-        ##  >Arom returns 1 - OK, 0 - False
-        ##
+        ##    Registrace zarizeni u AROM brain
+        ##    > Arom returns 1 - OK, 0 - False
+        ###**************************************************
+        RegisterDriver = rospy.ServiceProxy('/arom/RegisterDriver', arom.srv.RegisterDriver)
+        registred = RegisterDriver(name = self.name, sname = self.name, driver = self.arg['driver'], device = self.arg['type'], service = 'arom/driver/%s/%s' %(self.arg['type'], self.name), status = 1)
+        rospy.loginfo("%s: >> register %s driver: %s" %(self.name, self.arg['driver'], registred))
 
-        RegisterDriver = rospy.ServiceProxy('arom/RegisterDriver', arom.srv.RegisterDriver)
-        registred = RegisterDriver(name = self.name, sname= self.name, driver = 'EQmod', device = 'mount', status = 1)
-        rospy.loginfo("%s: >> register %s driver: %s" %(self.name, 'EQmod', registred))
+        ##    Spusti se Action servis pro zmenu cile
+        ###**************************************************
+        #self.act = actionlib.SimpleActionServer('arom/%s/%s/target' %((self.arg['type'], self.name), arom.msg.MountTargetAction, execute_cb=self.ReciveTarget, auto_start = False)
+        #self.act.start()
 
-        ##
-        ##  Spusti se Action servis pro zmenu cile
-        ##
-
-        self.act = actionlib.SimpleActionServer('arom/mount/%s/target'% self.name, arom.msg.MountTargetAction, execute_cb=self.ReciveTarget, auto_start = False)
-        self.act.start()
-
-        ##
-        ##  Ovladac se pripoji k montazi
-        ##
-
+        ##    Ovladac se pripoji k montazi
+        ###**************************************************
         if self.Autoconnect:
             self.connect()
 
-        ##
-        ##  Vytvoreni servisu na praci s montazi
-        ##
+        ##    Vytvoreni servisu na praci s montazi
+        ###**************************************************
+        self.driver = rospy.Service('/arom/driver/%s/%s' %(self.arg['type'], self.name), arom.srv.DriverControl, self.recieveHandler)
 
-        self.s_MountParameters = rospy.Service('arom/mount/parameter', arom.srv.MountParameter, self.MountParameter)
-        self.pub_mount_position = rospy.Publisher('arom/mount/location', String, queue_size=10)
+        ##    Publishera na jednoduche prikazy
+        ###**************************************************
+        #~~self.s_MountParameters =  rospy.Service('arom/mount/%s/parameter' %(self.name), arom.srv.MountParameter, self.MountParameter)
+        self.pub_mount_position = rospy.Publisher('/arom/%s/%s/location' %(self.arg['type'], self.name), String, queue_size=10)
 
-        ##
-        ##  Vytvoreni subsribera na prijimani dat
-        ##
 
-        rospy.Subscriber("arom/mount/", arom.msg.DriverControlm, self.reset)
+        ###    Vytvoreni subscribera na prijimani dat  - typ bude ==arom/mount/[jmeno]==
+        ###**************************************************
+        rospy.Subscriber('/arom/%s/%s' %(self.arg['type'],self.name), arom.msg.DriverControlm, self.recieveHandler)
 
-        ##
-        ##  Ovladac pujde ukoncit
-        ##
 
-        rate = rospy.Rate(2)
+        ###    Ovladac pujde ukoncit
+        ###**************************************************
+
+        rate = rospy.Rate(10)
         while not rospy.is_shutdown():
             self.update()
             slew_err = 0.01
@@ -113,17 +110,28 @@ class mount():
             self.pub_mount_position.publish("%f;%f;%s;%s;" %(self.coordinates.ra.degree, self.coordinates.dec.degree, self.coordinates_altaz.alt.degree, self.coordinates_altaz.az.degree))
             #rospy.loginfo("loc: %s Cyba: %f" %(str(self.coordinates.to_string('dms')), self.coordinates.position_angle(self.coordinates_target).degree))  
             #rospy.set_param('heq5/location', self.coordinates.to_string('dms'))
+            
             rate.sleep()
         
         self.stop()
         rospy.set_param('heq5/restoreloc', self.coordinates.transform_to(AltAz(obstime = Time.now(), location=self.observatory)).to_string('dms'))
 
 
-    def reset(self, msg):
+    def recieveHandler(self, msg):
+        print "==============================="
         rospy.loginfo(msg)
         data = eval(msg.data)
         rospy.logerr(repr(msg.type))
-        if msg.type == 'Slew':
+        if msg.type == 'function':
+            try:
+                result = getattr(self, msg.data)()
+                rospy.logdebug("function '%s' returns: %s" %(msg.data, result))
+                return arom.srv.DriverControlResponse(data = repr(result), state = True)
+
+            except Exception, e:
+                return arom.srv.DriverControlResponse(data = repr(e), state = False)
+
+        elif msg.type == 'Slew':
             self.coordinates_target = SkyCoord(ra = float(data['ra']), dec = float(data['dec']), unit = 'deg')
             self.newTarget = 1
             rospy.logdebug("Souradnice nastaveny na: %s Aktualni jsou: %s Jejich rozdil je %s..." %(self.coordinates_target.to_string('dms') , self.coordinates.to_string('dms') ,self.coordinates.position_angle(self.coordinates_target).to_string() ))
@@ -136,14 +144,11 @@ class mount():
             
         elif msg.type == 'getPosition':
             rospy.logerr("mount sync jeste neni implementovan")
+            return arom.srv.DriverControlResponse(name='nemo', type='type', data='data', done=True)
             #return arom.srv.DriverControlRespond(done = True, data = "{'ra':"+str(self.coordinates.ra.degree)+"'ra':"+str(self.coordinates.dec.degree)+"}")
         else:
-            try:
-                out = argv(self, msg.type)(data)
-                return arom.srv.DriverControlRespond(done = True, data = repr(out))
-            except Exception, e:
-                rospy.logerr(e)
-            rospy.logerr("Zprava '%s' je neznama" %(repr(msg.type)))
+            return arom.srv.DriverControlResponse(done = False, data = repr(None))
+            
 
     def MountParameter(self, MountParameter = None):
         rospy.loginfo('%s: GetNewParameters: %s' %(self.name, MountParameter))
