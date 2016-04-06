@@ -27,35 +27,36 @@ from astropy.time import TimeDelta
 class mount():
     def __init__(self, parent = None, arg = None, name = "EQmod", port="/dev/ttyUSB0", connect = True):
         self.arg = arg
-        self.observatory = EarthLocation(lat=49*u.deg, lon=14*u.deg, height=300*u.m)
-        self.newTarget = 0
-        self.init()
-        self.slewing = False
-        self.tracking = False
-        self.trackingMode = 'sidreal'
+        self.observatory = {}
+        self.mountParams = {}
+        self.observatory['coordinates'] = EarthLocation(lat=49*u.deg, lon=14*u.deg, height=300*u.m)
+        self.newTarget = 0 ## X
+        self.slewing = False ## X
+        self.tracking = False ## X
+        self.trackingMode = 'sidreal' ## X
         self.Autoconnect = connect
         self.port = port
         self.parent = parent
         self.name = self.arg['name']
         self.sname = self.name
 
-##
-##  Vlastni inicizalizace
-
-        self.init()
-
+        self.mountParams['tracking'] = False
+        self.mountParams['trackingOffTime'] = Time.now()
+        self.mountParams['trackingMode'] = 'sidreal'
+        self.mountParams['newTarget'] = 0
+        self.mountParams['coordinates'] = SkyCoord(alt=0.0, az=90.0, frame='altaz', unit='deg', obstime = Time.now(), location = self.observatory['coordinates']).icrs
         if rospy.get_param('heq5/restoreloc', None):
-            self.coordinates = SkyCoord(rospy.get_param('heq5/restoreloc'), unit='deg', obstime = Time.now(), frame = 'altaz', location = self.observatory).icrs
-            rospy.loginfo("restoring saved position %s" %(repr(self.coordinates)))
-        else:
-            self.coordinates = SkyCoord(0.0, 0.0, frame='icrs', unit='deg')
-        self.coordinates_target  =  SkyCoord(0.0, 0.0, frame='icrs', unit='deg')
-        self.coordinates_raw = [0,0]
-        self.mountUnit = [1,1]   # kolikrat se musi vynasobit stupne aby to odpovidalo jednotkam montaze
-        self.syncOffSet = [0,0]
+            self.mountParams['coordinates'] = SkyCoord(rospy.get_param('heq5/restoreloc'), unit='deg', obstime = Time.now(), frame = 'altaz', location = self.observatory['coordinates']).icrs
+            rospy.loginfo("restoring saved position %s" %(repr(self.mountParams['coordinates'])))
+        self.mountParams['coordinates_target'] = self.mountParams['coordinates']
+
         self.init_time = Time.now()
         self.DayLenght = {'solar': (24.0*60*60), 'sidreal': (23.0*60*60 + 56.0*60 + 4.0916), 'moon':  (24.0*60*60 + 49.0*60), 'custom': (24.0*60*60)}
         self._setHorizont()
+
+##
+##  Vlastni inicizalizace
+        self.init()
 
                                                                                                 ##  Ceka to na spusteni AROMbrain nodu
         rospy.init_node('AROM_mount')
@@ -100,42 +101,42 @@ class mount():
 
         rate = rospy.Rate(10)
         while not rospy.is_shutdown():
-            self.update()
+            #self.update()
             slew_err = 0.01
-            #if abs(self.coordinates.ra.degree - self.coordinates_target.ra.degree) > slew_err or abs(self.coordinates.dec.degree - self.coordinates_target.dec.degree) > slew_err:# and not self.slewing:
+            #if abs(self.mountParams['coordinates'].ra.degree - self.mountParams['coordinates']_target.ra.degree) > slew_err or abs(self.mountParams['coordinates'].dec.degree - self.mountParams['coordinates']_target.dec.degree) > slew_err:# and not self.slewing:
             if self.newTarget:# and not self.slewing:
-                #rospy.loginfo("Chyba namireni je %i a %i" %((self.coordinates.ra.degree - self.coordinates_target.ra.degree), abs(self.coordinates.dec.degree - self.coordinates_target.dec.degree)))
+                #rospy.loginfo("Chyba namireni je %i a %i" %((self.mountParams['coordinates'].ra.degree - self.mountParams['coordinates']_target.ra.degree), abs(self.mountParams['coordinates'].dec.degree - self.mountParams['coordinates']_target.dec.degree)))
                 self.setPosition()
             self.getPosition()
-            self.pub_mount_position.publish("%f;%f;%s;%s;" %(self.coordinates.ra.degree, self.coordinates.dec.degree, self.coordinates_altaz.alt.degree, self.coordinates_altaz.az.degree))
-            #rospy.loginfo("loc: %s Cyba: %f" %(str(self.coordinates.to_string('dms')), self.coordinates.position_angle(self.coordinates_target).degree))  
-            #rospy.set_param('heq5/location', self.coordinates.to_string('dms'))
+            self.getPosition("SkyCoord")
+            print self.mountParams['coordinates']
+            self.pub_mount_position.publish("%f;%f;%s;%s;" %(self.mountParams['coordinates'].ra.degree, self.mountParams['coordinates'].dec.degree, self.mountParams['coordinates'].transform_to(AltAz(obstime = Time.now(), location=self.observatory['coordinates'])).alt.degree, self.mountParams['coordinates'].transform_to(AltAz(obstime = Time.now(), location=self.observatory['coordinates'])).az.degree))
             
             rate.sleep()
         
         self.stop()
-        rospy.set_param('heq5/restoreloc', self.coordinates.transform_to(AltAz(obstime = Time.now(), location=self.observatory)).to_string('dms'))
+        rospy.set_param('heq5/restoreloc', self.mountParams['coordinates'].transform_to(AltAz(obstime = Time.now(), location=self.observatory['coordinates'])).to_string('dms'))
 
 
     def recieveHandler(self, msg):
-        print "==============================="
-        rospy.loginfo(msg)
         data = eval(msg.data)
-        rospy.logerr(repr(msg.type))
         if msg.type == 'function':
             try:
-                result = getattr(self, msg.data)()
-                rospy.logdebug("function '%s' returns: %s" %(msg.data, result))
-                return arom.srv.DriverControlResponse(data = repr(result), state = True)
+                if data or msg.data != '':
+                    result = getattr(self, str(msg.name))(eval(msg.data))
+                else:
+                    result = getattr(self, str(msg.name))()
+                #result = self.MountParameter()
+                return arom.srv.DriverControlResponse(data = repr(result), done = True)
 
             except Exception, e:
-                return arom.srv.DriverControlResponse(data = repr(e), state = False)
+                return arom.srv.DriverControlResponse(data = repr(e), name = repr("Err"), done = False)
 
         elif msg.type == 'Slew':
-            self.coordinates_target = SkyCoord(ra = float(data['ra']), dec = float(data['dec']), unit = 'deg')
+            self.mountParams['coordinates_target'] = SkyCoord(ra = float(data['ra']), dec = float(data['dec']), unit = 'deg')
             self.newTarget = 1
-            rospy.logdebug("Souradnice nastaveny na: %s Aktualni jsou: %s Jejich rozdil je %s..." %(self.coordinates_target.to_string('dms') , self.coordinates.to_string('dms') ,self.coordinates.position_angle(self.coordinates_target).to_string() ))
-            #return arom.srv.DriverControlRespond(done = True, data = "{'ra':"+str(self.coordinates_target.ra.degree)+"'ra':"+str(self.coordinates_target.dec.degree)+"}")
+            rospy.logdebug("Souradnice nastaveny na: %s Aktualni jsou: %s Jejich rozdil je %s..." %(self.mountParams['coordinates_target'].to_string('dms') , self.mountParams['coordinates'].to_string('dms') ,self.mountParams['coordinates'].position_angle(self.mountParams['coordinates_target']).to_string() ))
+            #return arom.srv.DriverControlRespond(done = True, data = "{'ra':"+str(self.mountParams['coordinates']_target.ra.degree)+"'ra':"+str(self.mountParams['coordinates']_target.dec.degree)+"}")
         elif msg.type == 'Stop':
             rospy.logerr("mount stop jeste neni implementovan")
             pass
@@ -145,8 +146,9 @@ class mount():
         elif msg.type == 'getPosition':
             rospy.logerr("mount sync jeste neni implementovan")
             return arom.srv.DriverControlResponse(name='nemo', type='type', data='data', done=True)
-            #return arom.srv.DriverControlRespond(done = True, data = "{'ra':"+str(self.coordinates.ra.degree)+"'ra':"+str(self.coordinates.dec.degree)+"}")
+            #return arom.srv.DriverControlRespond(done = True, data = "{'ra':"+str(self.mountParams['coordinates'].ra.degree)+"'ra':"+str(self.mountParams['coordinates'].dec.degree)+"}")
         else:
+            rospy.logerr("Neznama funkce")
             return arom.srv.DriverControlResponse(done = False, data = repr(None))
             
 
@@ -184,8 +186,9 @@ class mount():
         raise NotImplementedError()
     
     def sync(self, param = None):
-        self.coordinates = param
-        self.coordinates_target = param
+        param = eval(param)
+        self.mountParams['coordinates'] = SkyCoord(ra=param.ra, dec=param.dec, unit='degree', obstime=Time.now(), frame='icrs')
+        #self.mountParams['coordinates_target'] = param
 
     def track(self, param = None):
         raise NotImplementedError()
@@ -227,20 +230,20 @@ class mount():
         print "version is blablabla"
 
     def setCoordinates(self, coordinates, unit = 'deg'):    # in degrees
-        print self.coordinates
-        self.coordinates = SkyCoord(coordinates[0], coordinates[1], frame='icrs', unit=unit)
-        return self.coordinates
+        print self.mountParams['coordinates']
+        self.mountParams['coordinates'] = SkyCoord(coordinates[0], coordinates[1], frame='icrs', unit=unit)
+        return self.mountParams['coordinates']
 
     def setTarget(self, coordinates, unit = 'deg'):    # in degrees
-        print self.coordinates_target
-        self.coordinates_target = SkyCoord(coordinates[0], coordinates[1], frame='icrs', unit=unit)
-        return self.coordinates_target
+        print self.mountParams['coordinates_target']
+        self.mountParams['coordinates_target'] = SkyCoord(coordinates[0], coordinates[1], frame='icrs', unit=unit)
+        return self.mountParams['coordinates_target']
 
     def getCoordinates(self, mode = 'radec'):    # in degrees
         if self.tracking:
-            return self.coordinates
+            return self.mountParams['coordinates']
         else:
-            return self.coordinates_altaz
+            return self.mountParams['coordinates'].altaz
 
     
     def _setHorizont(self, check = True):
@@ -252,9 +255,9 @@ class mount():
 
     def LimitGuarder(self, loc = None):
         if loc == None:
-            loc = self.coordinates
+            loc = self.mountParams['coordinates']
 
-        altaz = loc.transform_to(AltAz(obstime = Time.now(), location=self.observatory))
+        altaz = loc.transform_to(AltAz(obstime = Time.now(), location=self.observatory['coordinates']))
         F_az = (np.abs(self.horizont[:,0] - altaz.az.degree)).argmin()
         local_horizont = self.horizont[F_az]
 
@@ -292,10 +295,15 @@ class mount():
 ######################################################################################
         
 class EQmod(mount):
-    def init(self):   
-        self.mountParams = {} 
+    def init(self):
+
         self.stepsPerRev={1:1, 2:1}
         self.data = ""  
+
+
+        #=========================================
+        #      EQmod serial comands
+        #=========================================
         self.Initialize ='F'
         self.InquireMotorBoardVersion='e'
         self.InquireGridPerRevolution='a'
@@ -322,9 +330,10 @@ class EQmod(mount):
         self.Axis2='2'       # DE/ALT
         self.AxRa=0          # RA/AZ
         self.AxDec=1         # DE/ALT
+        #=========================================
+        #=========================================
+
         self.DayLenght = {'solar': (24.0*60*60), 'sideral': (23.0*60*60 + 56.0*60 + 4.0916), 'moon':  (24.0*60*60 + 49.0*60), 'custom': (24.0*60*60)}
-        self.coordinates = [0,0]
-        self.coordinates_instrumental = [0,0]
         self.syncOffSet = [0,0]
         self.driverSyncTime = Time.now()
         self.coord_instrument_old = (0,0,Time.now())
@@ -332,6 +341,13 @@ class EQmod(mount):
         ##
         ##  Registrace ovladace jako mount
         ##
+
+    def getPositionJSON(self):
+        print "blablabla"
+        JsonArr = []
+        position = self.getPosition()
+        print position
+        return position
 
 
     def _axisPosToDeg(self, loc, ax=0):
@@ -369,55 +385,71 @@ class EQmod(mount):
         self.mountParams['b2'] = self._GetData(self.InquireTimerInterruptFreq, self.Axis2)
         self.mountParams['g2'] = self._GetData(self.InquireHighSpeedRatio, self.Axis2)
 
+        self._GetData(self.NotInstantAxisStop, self.Axis1,)
+        self._GetData(self.NotInstantAxisStop, self.Axis2,)
+
     # Get mount name
-        self.electronicVersion={}
+        self.electronicVersion={}  ## X
         self.electronicVersion['raw']=self.Revu24str2long(self.mountParams['e']);
         self.electronicVersion['mountID'] = ((self.electronicVersion['raw'] & 0xFF) << 16) | ((self.electronicVersion['raw'] & 0xFF00)) | ((self.electronicVersion['raw'] & 0xFF0000) >> 16);
-        self.mountID=self.electronicVersion['mountID'] & 0xFF;
+        self.mountID=self.electronicVersion['mountID'] & 0xFF;  ## X
+        self.mountParams['MountModelID'] = self.electronicVersion['mountID'] & 0xFF
 
         if  self.electronicVersion ['mountID'] & 0xFF ==  0x00:
-            self.electronicVersion['name'] = "EQ6"
+            self.electronicVersion['name'] = "EQ6"   ## X
+            self.mountParams['MountModel'] = "EQ6"
 
         elif self.electronicVersion['mountID'] & 0xFF == 0x01:
-            self.electronicVersion['name'] = "HEQ5"
+            self.electronicVersion['name'] = "HEQ5"   ## X
+            self.mountParams['MountModel'] = "HEQ5"
 
         elif self.electronicVersion['mountID'] & 0xFF == 0x02:
-            self.electronicVersion['name'] = "EQ5"
+            self.electronicVersion['name'] = "EQ5"   ## X
+            self.mountParams['MountModel'] = "EQ5"
 
         elif self.electronicVersion['mountID'] & 0xFF == 0x03:
-            self.electronicVersion['name'] = "EQ3"
+            self.electronicVersion['name'] = "EQ3"   ## X
+            self.mountParams['MountModel'] = "EQ3"
 
         elif self.electronicVersion['mountID'] & 0xFF == 0x80:
-            self.electronicVersion['name'] = "GT"
+            self.electronicVersion['name'] = "GT"   ## X
+            self.mountParams['MountModel'] = "GT"
 
         elif self.electronicVersion['mountID'] & 0xFF == 0x81:
-            self.electronicVersion['name'] = "MF"
+            self.electronicVersion['name'] = "MF"   ## X
+            self.mountParams['MountModel'] = "MF"
 
         elif self.electronicVersion['mountID'] & 0xFF == 0x82:
-            self.electronicVersion['name'] = "114GT"
+            self.electronicVersion['name'] = "114GT"   ## X
+            self.mountParams['MountModel'] = "114GT"
 
         elif self.electronicVersion['mountID'] & 0xFF == 0x90:
-            self.electronicVersion['name'] = "DOB"
+            self.electronicVersion['name'] = "DOB"   ## X
+            self.mountParams['MountModel'] = "DOB"
 
         elif self.electronicVersion['mountID'] & 0xFF == 0xF0:
-            self.electronicVersion['name'] = "GEEHALEL"
+            self.electronicVersion['name'] = "GEEHALEL"   ## X
+            self.mountParams['MountModel'] = "GEEHALEL"
         else:
-            self.electronicVersion['name'] = "Unknown_0x%x" %(self.electronicVersion['mountID'] & 0xFF)
+            self.electronicVersion['name'] = "Unknown_0x%x" %(self.electronicVersion['mountID'] & 0xFF)   ## X
+            self.mountParams['MountModel'] = "Unknown_0x%x" %(self.electronicVersion['mountID'] & 0xFF)
+
+            #ax_RA = self._GetData(self.GetAxisPosition, self.Axis1)
+            #ax_DEC = self._GetData(self.GetAxisPosition, self.Axis2)
+
 
     # get Steps per one axcis revolution
-        self.stepsPerRev={}
+        self.stepsPerRev={}   ## X
         self.stepsPerRev[self.AxRa] = self.Revu24str2long(self.mountParams['a1'])
         self.stepsPerRev[self.AxDec]= self.Revu24str2long(self.mountParams['a2'])
-        rospy.loginfo("Steps per revolution: %s" %self.stepsPerRev)
+        self.mountParams['StepsPerRev'] = [self.stepsPerRev[self.AxRa], self.stepsPerRev[self.AxDec]]
+        self.mountParams['StepsPerDeg'] = [self.stepsPerRev[self.AxRa]/360.0, self.stepsPerRev[self.AxDec]/360.0] # hodnoty pro HEQ5 jsou  [25066.666666666668, 25066.666666666668]
+
+        rospy.loginfo("Steps per revolution: %s and per degree %s" %(repr(self.mountParams['StepsPerRev']), repr(self.mountParams['StepsPerDeg'])))
         
-        self._GetData(self.SetAxisPosition, self.Axis1, self.Revu24str2long(str(0)))
-        self._GetData(self.SetAxisPosition, self.Axis2, self.Revu24str2long(str(self.stepsPerRev[1]/2)))
 
-    # calculate mount units
-        self.mountUnit = [self.stepsPerRev[self.AxRa]/360.0, self.stepsPerRev[self.AxDec]/360.0]   # hodnoty pro HEQ5 jsou  [25066.666666666668, 25066.666666666668]
-
+        print "getPosition('SkyCoord') >> ", self.getPosition("SkyCoord")
         self.getPosition()
-        #self.syncOffSet = self.coordinates
 
         self.coord_instrument_old = (0,self.stepsPerRev[1]/2,Time.now())
 
@@ -425,7 +457,7 @@ class EQmod(mount):
 
     def slew(self, target = [None, None], unit = 'deg'):
         if target[0] != None and target[1] != None:
-            self.coordinates_target = SkyCoord(int(target[0]), int(target[1]), unit = unit)
+            self.mountParams['coordinates_target'] = SkyCoord(int(target[0]), int(target[1]), unit = unit)
             self.setPosition()
 
     def stop(self):
@@ -478,11 +510,11 @@ class EQmod(mount):
         try:
             self.getPosition()
             change = [0,0]
-            change[0] = Angle(Angle(self.coordinates_target.ra) - Angle(self.coordinates.ra))
-            change[1] = Angle(Angle(self.coordinates_target.dec) - Angle(self.coordinates.dec)).wrap_at('90d')
+            change[0] = Angle(Angle(self.mountParams['coordinates_target'].ra) - Angle(self.mountParams['coordinates'].ra))
+            change[1] = Angle(Angle(self.mountParams['coordinates_target'].dec) - Angle(self.mountParams['coordinates'].dec)).wrap_at('90d')
             #change[1] = Angle(0, unit='deg')
             print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-            rospy.loginfo( "Change: ]%s, %s] from: [%s] to: [%s]"%( str(change[0].degree),str(change[1].degree) , str(self.coordinates.to_string('dms')), str(self.coordinates_target.to_string('dms'))))
+            rospy.loginfo( "Change: ]%s, %s] from: [%s] to: [%s]"%( str(change[0].degree),str(change[1].degree) , str(self.mountParams['coordinates'].to_string('dms')), str(self.mountParams['coordinates_target'].to_string('dms'))))
 
             ##
             ## Vyber smeru otaceni
@@ -510,11 +542,11 @@ class EQmod(mount):
                 dirDEC = '21'
 
 
-            stepsRA = self.mountUnit[0] * abs(change[0].degree)
-            stepsDEC = self.mountUnit[1] * abs(change[1].degree)
+            stepsRA = self.mountParams['StepsPerDeg'][0] * abs(change[0].degree)
+            stepsDEC = self.mountParams['StepsPerDeg'][1] * abs(change[1].degree)
             print change
 
-            rospy.loginfo("SLEW TO %s (%s) with difference %s" %(self.coordinates, self.getCoordinates, change))
+            rospy.loginfo("SLEW TO %s (%s) with difference %s" %(self.mountParams['coordinates'], self.getCoordinates, change))
 
             ra = self._GetData(self.NotInstantAxisStop, self.Axis1,)
             ra = self._GetData(self.GetAxisStatus, self.Axis1,)
@@ -540,7 +572,7 @@ class EQmod(mount):
                 ax0 = self._GetData(self.GetAxisStatus, self.Axis1)
                 ax1 = self._GetData(self.GetAxisStatus, self.Axis2)
                 if ax0[2] ==  "0" and ax1[2] ==  "0":
-                    self.coordinates = self.coordinates_target
+                    self.mountParams['coordinates'] = self.mountParams['coordinates_target']
                     self.time_data = time.time()
                     ra = self._GetData(self.NotInstantAxisStop, self.Axis2)
                     ra = self._GetData(self.SetMotionMode, self.Axis1, '20')
@@ -558,37 +590,48 @@ class EQmod(mount):
         except Exception, e:
             rospy.logerr("Error in setCoordinates: %s" %(e))
             #print e
-        print "coordinates, %s" %(str(self.coordinates.to_string('dms')))
+        print "coordinates, %s" %(str(self.mountParams['coordinates'].to_string('dms')))
 
-        return self.coordinates_target
+        return self.mountParams['coordinates_target']
 
-    def getPosition(self, param = None):
-        try:
-            raw = self._GetData(self.GetAxisPosition, self.Axis1)
-            decw = self._GetData(self.GetAxisPosition, self.Axis2)
-
-            ra = self.Revu24str2long(raw)
-            dec = self.Revu24str2long(decw)
-
-            ra =  Angle((ra ) / self.mountUnit[0], unit='deg') - Angle( 380*60*60*24 / (Time.now() - self.driverSyncTime).sec, unit='deg')
-            dec = Angle(0, unit='deg')
-            
-            self.LimitGuarder()
-
+    def getPosition(self, Type = None):
+        if Type == None:
             try:
-                self.coordinates_instrumental = SkyCoord(ra = ra, dec = dec)
+                ax_RA = self._GetData(self.GetAxisPosition, self.Axis1)
+                ax_DEC = self._GetData(self.GetAxisPosition, self.Axis2)
+
+                ra = self.Revu24str2long(ax_RA)
+                dec = self.Revu24str2long(ax_DEC)
+
+                ra =  Angle((ra) / self.mountParams['StepsPerDeg'][0], unit='deg') - Angle( 380*60*60*24 / (Time.now() - self.driverSyncTime).sec, unit='deg')
+                dec = Angle(0, unit='deg')
+                
+                self.LimitGuarder()
+
+                
+
+                return self.mountParams['coordinates']
             except Exception, e:
-                print e
+                rospy.logerr("Error in getPosition: %s" %(e))
 
-            return self.coordinates
+        elif Type == 'SkyCoord':
+            return self.mountParams['coordinates']
 
-        except Exception, e:
-            rospy.logerr("Error in getPosition: %s" %(e))
+        elif str(Type) == 'JSON_ALL':
+            radec = self.mountParams['coordinates']
+            altaz = self.mountParams['coordinates'].transform_to(AltAz(obstime = Time.now(), location=self.observatory['coordinates']))
+            return [radec.ra.degree, radec.dec.degree, altaz.alt.degree, altaz.az.degree]
 
-    def getRealPosition(self, param = None):
-        self.getPosition()
-        self.coordinates_real = (self.coordinates[0]+self.syncOffSet[0], self.coordinates[1]+self.syncOffSet[1])
-        return self.coordinates_real
+        else: 
+            rospy.logerr("neznamy typ (%s) v getPosition" %repr(Type))
+            return -1
+
+
+
+    #def getRealPosition(self, param = None):
+    #    self.getPosition()
+    ##    self.mountParams['coordinates']_real = (self.mountParams['coordinates'][0]+self.syncOffSet[0], self.mountParams['coordinates'][1]+self.syncOffSet[1])
+    #    return self.mountParams['coordinates']_real
 
     def GetMotorStatus(self, axis):
         response = self._GetData(self.GetAxisStatus, axis);
@@ -629,7 +672,7 @@ class EQmod(mount):
 
     def update(self, correction = False):
         old_ax1, old_ax2, old_time = self.coord_instrument_old
-        coordinater = self.coordinates
+        coordinater = self.mountParams['coordinates']
         cas = Time.now()
         
         difference_time = cas - old_time
@@ -653,7 +696,7 @@ class EQmod(mount):
         if difference_time.sec > 30:
             self.coord_instrument_old = ax1, ax2, cas
 
-        self.coordinates_altaz = self.coordinates.transform_to(AltAz(obstime = Time.now(), location=self.observatory))
+        #self.mountParams['coordinates'].altaz = self.mountParams['coordinates'].transform_to(AltAz(obstime = Time.now(), location=self.observatory['coordinates']))
 
         #if abs(difference_ax1 - predpokladRa) > 100:
         #    print "> 100"
@@ -752,8 +795,8 @@ class SynScan(mount):
         raw = str(raw).split('#')[0].split(',')
         ra = int(raw[0],16)*360.0/4294967296.0
         dec = int(raw[1],16)*360.0/4294967296.0
-        self.coordinates = [ra, dec]
-        return self.coordinates
+        self.mountParams['coordinates'] = [ra, dec]
+        return self.mountParams['coordinates']
 
     def setPosition_geo(self, param = None):
         raise NotImplementedError()
