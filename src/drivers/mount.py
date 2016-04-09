@@ -52,7 +52,7 @@ class mount():
         self.DayLenght = {
                         'solar': (24.0*60*60),
                         'sidreal': (23.0*60*60 + 56.0*60 + 4.0916),
-                        'moon':  (24.0*60*60 + 49.0*60),
+                        'moon':  (60*60),
                         'custom': (24.0*60*60)
         }
         self._setHorizont()
@@ -209,11 +209,21 @@ class mount():
         print "request on 'advSync", param, coord
         self.mountParams['coordinates'] = coord
 
-    
+
     def sync(self, param = None):
         param = eval(param)
         self.mountParams['coordinates'] = SkyCoord(ra=param.ra, dec=param.dec, unit='degree', obstime=Time.now(), frame='icrs')
-        #self.mountParams['coordinates_target'] = param
+
+    def advTrack(self, param = None):
+        param = eval(param)
+        if param['type'] == '0':
+            self.mountParams['tracking'] = False
+            self.mountParams['trackingOffTime'] = Time.now()
+        else:
+            self.mountParams['tracking'] = True
+            self.mountParams['trackingMode'] = param['type']
+        print "request on 'advSync", param
+        self.track()
 
     def track(self, param = None):
         raise NotImplementedError()
@@ -477,13 +487,23 @@ class EQmod(mount):
 
         self.coord_instrument_old = (0,self.stepsPerRev[1]/2,Time.now())
 
-        self.mountParams['tracking'] = True
-
 
     def slew(self, target = [None, None], unit = 'deg'):
         if target[0] != None and target[1] != None:
             self.mountParams['coordinates_target'] = SkyCoord(int(target[0]), int(target[1]), unit = unit)
             self.setPosition()
+
+    def track(self, param = None):
+        ra = self._GetData(self.NotInstantAxisStop, self.Axis1)
+        ra = self._GetData(self.NotInstantAxisStop, self.Axis2)
+        if self.mountParams['tracking'] == True:
+            ra = self._GetData(self.SetMotionMode, self.Axis1, '20')  # reverse - '21'
+            sp = self.long2Revu24str(int(self.mountParams['StepsPerRev'][0]/self.DayLenght[self.mountParams['trackingMode']])*1800)
+            ra = self._GetData(self.SetStepPeriod, self.Axis1, sp)
+            ra = self._GetData(self.StartMotion, self.Axis1)
+            print "start tracking"
+        else:
+            pass
 
     def stop(self):
         self.tracking = False
@@ -611,10 +631,7 @@ class EQmod(mount):
                     break
                 time.sleep(0.1)
 
-            if self.mountParams['tracking'] == True:
-                sp = self.long2Revu24str( int(self.mountParams['StepsPerRev'][0]/self.DayLenght[self.mountParams['trackingMode']])*6)
-                ra = self._GetData(self.SetStepPeriod, self.Axis1, sp) 
-                ra = self._GetData(self.StartMotion, self.Axis1)
+            self.track()
 
         except Exception, e:
             rospy.logerr("Error in setCoordinates: %s" %(e))
