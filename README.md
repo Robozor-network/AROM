@@ -10,7 +10,7 @@ There are few systems for controlling robotics telescopes. Some of them are comm
 ###Goals
 The goals of this project are taken from the gained experience with observing and testing other systems.
 
-Main goals are:
+#####Main goals are:
  * Minimal maintenance requirements
  * Independent on control computer
  * Service-lees observing (robotic observing)
