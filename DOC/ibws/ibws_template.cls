@@ -137,7 +137,7 @@
   {\parindent=0pt%
    \abstractfont%\
   \setlength{\baselineskip}{2.8ex}
-  \textup{\textbf{Abstract.}}
+  \textup{\textbf{Abstract}}
 }
   {}
 
