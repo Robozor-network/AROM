@@ -20,31 +20,42 @@ def server(req):
 
 class pymlab_server():
     def __init__(self):
+        self.err_count = 0
         self.pymlab_read = False # slouzi k ochrane pymlabu pred pokusem o dve cteni zaroven ...
         self.devices = {}
+        self.i2c = []
+        self.bus = []
 
 
     def init(self, cfg=None):
-        self.status = False
-        self.init = cfg
-        self.cfg_i2c = eval(cfg.i2c)
-        self.cfg_bus = eval(cfg.bus)
-        rospy.loginfo("konfiguracni data: %s" %str(cfg))
+        try:
+            self.status = False
+            self.init = cfg
 
-        self.pymlab_config = config.Config(i2c = self.cfg_i2c, bus = self.cfg_bus)
+            self.cfg_i2c = eval(cfg.i2c)
+            self.i2c.append(self.cfg_i2c)
+            self.cfg_bus = eval(cfg.bus)
+            self.bus.append(self.cfg_bus)
+
+            rospy.loginfo("konfiguracni data: %s" %str(cfg))
+            self.init_bus(i2c = self.cfg_i2c, bus = self.cfg_bus)
+
+            return True
+        except Exception, e:
+            rospy.logerr("#03:"+repr(e))
+            return False
+
+    def init_bus(self, i2c, bus):
+        self.pymlab_config = config.Config(i2c = i2c, bus = bus)
         self.pymlab_config.initialize()
-        for x in self.cfg_bus:
+        for x in bus:
             try:
                 self.devices[x['name']] = self.pymlab_config.get_device(x['name'])
             except Exception, e:
-                rospy.logerr(e)
+                rospy.logerr("#02:"+repr(e))
             print x['name'], 
             self.devices[x['name']] = self.pymlab_config.get_device(x['name'])
             print self.devices[x['name']]
-        rospy.set_param("devices", str(self.devices))
-        rospy.loginfo("self.device: %s" %str(self.devices))
-
-        return True
 
     def getvalue(self, cfg=None):
         val = int(float(self.lts_sen.get_temp()))
@@ -94,10 +105,20 @@ class pymlab_server():
                         #senderTest.publish(data)
                 print "\r",
                 '''
+                if self.err_count > 100:
+                    rospy.logwarn("restarting pymlab")
+                    self.err_count = 0
+                    for i, bus in enumerate(self.bus):
+                        try:
+                            rospy.loginfo("reloading pymlab bus:" + repr(bus))
+                            self.init_bus(i2c = self.i2c[i], bus = bus)
+                        except Exception, e:
+                            rospy.logerr(e)
+                        
                 rate.sleep()
             return True
 
-    def drive(self, cfg):
+    def drive(self, cfg):       # zpracovava requesty ostatatich nodu
         parameters = cfg.parameters
         method = cfg.method
         device = cfg.device
@@ -112,7 +133,8 @@ class pymlab_server():
             self.pymlab_read = False
             return str(reval)
         except Exception, e:
-            rospy.logerr(e)
+            self.err_count += 1
+            rospy.logerr("#01:"+repr(e))
             self.pymlab_read = False
             return str(False)
 
@@ -124,7 +146,7 @@ def main():
     rospy.Subscriber("pymlab_server", PymlabServerStatusM, ps.status)
     s1 = rospy.Service('pymlab_init', PymlabInit, ps.init)
     s2 = rospy.Service('pymlab_server', PymlabServerStatus, ps.status)
-    s3 = rospy.Service('pymlab_drive', PymlabDrive, ps.drive)
+    s3 = rospy.Service('pymlab_drive', PymlabDrive, ps.drive)               # slouzi k prijmuti requestu
 
     rospy.loginfo("Ready to get work.")
     rospy.spin()

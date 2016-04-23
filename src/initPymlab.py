@@ -20,34 +20,45 @@ if __name__ == "__main__":
     bus = str([
                 {
                     "name":           "AWS_humi",
-                    "type":           "sht31",
+                    "type":           "sht31"
                 },{
                     "name":           "AWS_wind_s",
-                    "type":           "rps01",
+                    "type":           "rps01"
                 },{
-                    "name":           "AWS_temp_in",
-                    "type":           "lts01",
+                    "name":           "AWS_temp_ref",
+                    "type":           "lts01"
+
+                },{
+                    "name":           "AWS_wind_d",
+                    "type":           "mag01",
+                    "gauss":          0.88,
                 }#,{
+                #    "name":           "AWS_humi_in",
+                #    "type":           "sht25"
+
+                #}#{
                 #    "name":           "io",
                 #    "type":           "i2cio",
-                #}
-
+                #},
+                
             ])
-
     i2c2 = str({
             "device": "smbus",
             "port": 1,
         })
     bus2 = str([
                 {
-                    "name":           "sht25",
+                    "name":           "AWS_humi_in",
                     "type":           "sht25"
-                },{
-                    "name":           "StatusLCD",
-                    "type":           "i2clcd",
-                }
 
+                }#{
+                #    "name":           "io",
+                #    "type":           "i2cio",
+                #},
+                
             ])
+
+
 
 
     msg_pymlab = rospy.Publisher('pymlab_server', PymlabServerStatusM, queue_size=10)
@@ -58,4 +69,3 @@ if __name__ == "__main__":
     print pymlab(i2c=i2c2, bus=bus2)
     
     msg_pymlab.publish(name = "", data="{'rate': 0.01, 'start': True, 'AutoInputs': {}}")
-

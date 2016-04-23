@@ -136,61 +136,85 @@ class AWS01B(weatherStation):
 
 
     def mesure(self):
-        AWS_LTS_temp = eval(self.pymlab(device="sht25", method="get_temp_8bit", parameters=None).value)
-        #AWS_LTS_hum = eval(self.pymlab(device="sht25", method="get_hum_8bit", parameters=None).value)
-        self.variables['AWS_LTS_temp'] = AWS_LTS_temp
+
+    # LTS -- ref temp
+        data = self.pymlab(device="AWS_temp_ref", method="get_temp").value
+        print data
+        AWS_LTS_temp_ref = eval(data)
+        #self.variables['AWS_LTS_temp_ref'] = AWS_LTS_temp_ref
+
+    # SHT31
         TempHum = eval(self.pymlab(device="AWS_humi", method="get_TempHum", parameters=None).value)
-        #print TempHum
-        self.variables['AWS_AMBIENT_temp'] = TempHum[0]
-        self.variables['AWS_AMBIENT_humi'] = TempHum[1]
-        #print self.variables
-        rospy.set_param("weatherStation", str(self.variables))
-        rospy.loginfo('LTS: %s, sht31.temp: %s, sht31.humi: %s' %(str(AWS_LTS_temp), str(TempHum[0]), str(TempHum[1])))
+        #self.variables['AWS_AMBIENT_temp'] = TempHum[0]
+        #self.variables['AWS_AMBIENT_humi'] = TempHum[1]
 
-        if self.last_wind_mes + 10 * u.s < Time.now():
-            angles = np.zeros(5)
-            angles[4] = eval(self.pymlab(device="AWS_wind_s", method="get_angle", parameters='').value)
+    # SHT25
+        InTemp = eval(self.pymlab(device="AWS_humi_in", method="get_temp_8bit", parameters=None).value)
+        InHum = eval(self.pymlab(device="AWS_humi_in", method="get_hum_8bit", parameters=None).value)
+        #self.variables['AWS_AMBIENT_temp'] = TempHum[0]
+        #self.variables['AWS_AMBIENT_humi'] = TempHum[1]
+
+    # WIND
+
+        #rospy.set_param("weatherStation", str(self.variables))
+        rospy.loginfo('LTS: %s, sht31.temp: %s, sht31.humi: %s' %(str(AWS_LTS_temp_ref), str(TempHum[0]), str(TempHum[1])))
+
+        angles = np.zeros(5)
+        angles[4] = eval(self.pymlab(device="AWS_wind_s", method="get_angle", parameters='').value)
+        time.sleep(0.01)
+        angles[3] = eval(self.pymlab(device="AWS_wind_s", method="get_angle", parameters='').value)
+        time.sleep(0.01)
+        angles[2] = eval(self.pymlab(device="AWS_wind_s", method="get_angle", parameters='').value)
+        time.sleep(0.01)
+        angles[1] = eval(self.pymlab(device="AWS_wind_s", method="get_angle", parameters='').value)
+        n = 0
+        speed = 0
+        AVERAGING = 50
+
+        for i in range(AVERAGING):
             time.sleep(0.01)
-            angles[3] = eval(self.pymlab(device="AWS_wind_s", method="get_angle", parameters='').value)
-            time.sleep(0.01)
-            angles[2] = eval(self.pymlab(device="AWS_wind_s", method="get_angle", parameters='').value)
-            time.sleep(0.01)
-            angles[1] = eval(self.pymlab(device="AWS_wind_s", method="get_angle", parameters='').value)
-            n = 0
-            speed = 0
-            AVERAGING = 50
-
-            for i in range(AVERAGING):
-                time.sleep(0.01)
-                angles[0] = eval(self.pymlab(device="AWS_wind_s", method="get_angle", parameters='').value)
-                
-                if (angles[0] + n*360 - angles[1]) > 300:
-                    n -= 1
-                    angles[0] = angles[0] + n*360
-
-                elif (angles[0] + n*360 - angles[1]) < -300:  # compute angular speed in backward direction.
-                    n += 1
-                    angles[0] = angles[0] + n*360
-
-                else:
-                    angles[0] = angles[0] + n*360
-                
-                speed += (-angles[4] + 8*angles[3] - 8*angles[1] + angles[0])/12
-                angles = np.roll(angles, 1)
-
-            #speed = speed/AVERAGING             # apply averaging on acummulated value.
+            angles[0] = eval(self.pymlab(device="AWS_wind_s", method="get_angle", parameters='').value)
             
-            self.last_wind_mes = Time.now()
-            return [{'value':AWS_LTS_temp, 'name':'AWS_telescope_temp_lts', 'guantity': 'C', 'time': Time.now().unix},
-                    {'value':TempHum[0], 'name':'AWS_ambient_temp_2m', 'guantity': 'C', 'time': Time.now().unix},
-                    {'value':TempHum[1], 'name':'AWS_ambient_humi', 'guantity': 'perc', 'time': Time.now().unix},
-                    {'value':speed, 'name':'AWS_ambient_wind_speed_5m', 'guantity': 'ms-1', 'time': Time.now().unix}]
+            if (angles[0] + n*360 - angles[1]) > 300:
+                n -= 1
+                angles[0] = angles[0] + n*360
 
+            elif (angles[0] + n*360 - angles[1]) < -300:  # compute angular speed in backward direction.
+                n += 1
+                angles[0] = angles[0] + n*360
 
-        return [{'value':AWS_LTS_temp, 'name':'AWS_telescope_temp_lts', 'guantity': 'C', 'time': Time.now().unix},
-                {'value':TempHum[0], 'name':'AWS_ambient_temp_2m', 'guantity': 'C', 'time': Time.now().unix},
-                {'value':TempHum[1], 'name':'AWS_ambient_humi', 'guantity': 'perc', 'time': Time.now().unix}]
+            else:
+                angles[0] = angles[0] + n*360
+            
+            speed += (-angles[4] + 8*angles[3] - 8*angles[1] + angles[0])/12
+            angles = np.roll(angles, 1)
+
+        eval(self.pymlab(device="AWS_wind_d", method="route", parameters='').value)
+        (x, y, z) = eval(self.pymlab(device="AWS_wind_d", method="axes", parameters='').value)
+
+        if y>0:
+            wind_az = 90.0 - math.atan2(x,y)*180.0/math.pi
+        if y<0:
+            wind_az = 270.0- math.atan2(x,y)*180.0/math.pi
+        if y==0 and x<0:
+            wind_az = 180.0
+        if y==0 and x>0:
+            wind_az = 180.0
+
+        print " X: " + str(x) + " Y: " + str(y) + " Z: " + str(z) + " DIR: " + str(wind_az)
+
+        #speed = speed/AVERAGING             # apply averaging on acummulated value.
         
+        data_time = Time.now().unix
+        return [{'value':AWS_LTS_temp_ref, 'name':'AWS_telescope_temp_lts_ref', 'guantity': 'C', 'time': data_time},
+                {'value':TempHum[0], 'name':'AWS_ambient_temp_2m', 'guantity': 'C', 'time': data_time},
+                {'value':TempHum[1], 'name':'AWS_ambient_humi', 'guantity': 'perc', 'time': data_time},
+                {'value':InTemp, 'name':'AWS_in_temp', 'guantity': 'C', 'time': data_time},
+                {'value':InHum, 'name':'AWS_in_hum', 'guantity': 'perc', 'time': data_time},
+                {'value':speed, 'name':'AWS_ambient_wind_speed_5m', 'guantity': 'ms-1', 'time': data_time},
+                {'value':wind_az, 'name':'AWS_ambient_wind_direction_5m', 'guantity': 'ms-1', 'time': data_time}]
+
+
 
     def connect(self):
         pass
