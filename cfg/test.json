@@ -55,7 +55,9 @@
     {
         "type": "weatherStation",
         "name": "wu",
-        "driver": "WEATHERCLOUD"
+        "driver": "WEATHERCLOUD",
+        "id": "station id",
+        "pass": "user passworld"
     },
     {
         "type": "weatherStation",
