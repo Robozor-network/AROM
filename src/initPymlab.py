@@ -14,9 +14,9 @@ from sensor_server.msg import *
 
 if __name__ == "__main__":
     i2c = str({
-            "device": "hid",
-            "port": 1,
-        })
+                "device": "hid",
+                "port": 1,
+    })
     bus = str([
                 {
                     "name":           "AWS_humi",
@@ -32,23 +32,32 @@ if __name__ == "__main__":
                     "name":           "AWS_wind_d",
                     "type":           "mag01",
                     "gauss":          0.88,
+                },{
+                    "name":           "StatusLCD",
+                    "type":           "i2clcd"
                 }#,{
                 #    "name":           "AWS_humi_in",
                 #    "type":           "sht25"
-
-                #}#{
+                #}#,{
+                #    "name":           "dd_temp_g0a",
+                #    "type":           "sht25"
+                #}
+                ,{
+                    "name":           "dd_heater_g0a",
+                    "type":           "i2cpwm",
+                }#{
                 #    "name":           "io",
                 #    "type":           "i2cio",
                 #},
                 
-            ])
+    ])
     i2c2 = str({
             "device": "smbus",
             "port": 1,
         })
     bus2 = str([
                 {
-                    "name":           "AWS_humi_in",
+                    "name":           "dd_temp_g0a",
                     "type":           "sht25"
 
                 }#{

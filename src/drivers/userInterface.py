@@ -13,6 +13,7 @@ from arom.srv import *
 from arom.msg import *
 import serial
 from astropy.time import Time
+import MySQLdb as mdb
 
 
 class UserInteface(object):
@@ -23,6 +24,14 @@ class UserInteface(object):
         self.parent = parent
         self.name = name
         self.variables = var
+        
+        ##
+        ##  Pripojeni k databazi
+        ##
+
+        self.connection = mdb.connect(host="localhost", user="root", passwd="root", db="AROM", use_unicode=True, charset="utf8")
+        self.cursorobj = self.connection.cursor()
+
 
         ##
         ##  Inicializace vlastniho ovladace
@@ -100,6 +109,10 @@ class i2clcd(UserInteface):
         self.mode_id = 0
         self.mode_count = 0
         
+        self.pymlab(device="StatusLCD", method="puts", parameters="AROM telescope" )
+    
+
+
     def run(self):
         if self.mode_id > len(self.mode)-1:
             self.mode_id = 0
@@ -114,22 +127,22 @@ class i2clcd(UserInteface):
         try:
             if self.mode[self.mode_id] == 'aws':
                 self.mode_count += 1
-                if self.mode_count > 5:
+                if self.mode_count > 2:
                     self.mode_count = 0
                     self.mode_id +=1
-                weather = eval(rospy.get_param("weatherStation"))
-                print weather
+                #weather = eval(rospy.get_param("weatherStation"))
+                #print weather
 
                 self.pymlab(device="StatusLCD", method="clear")
                 time.sleep(0.05)
                 self.pymlab(device="StatusLCD", method="home")
-                self.pymlab(device="StatusLCD", method="puts", parameters="'aT:%.2fC SHT31'" % (float(str(weather['AWS_AMBIENT_temp']))))
+                self.pymlab(device="StatusLCD", method="puts", parameters="'aT:%.2fC SHT31'" % (float(999.99)))
                 self.pymlab(device="StatusLCD", method="set_row2")
-                self.pymlab(device="StatusLCD", method="puts", parameters="'rH:%.2f%% MLAB'" % (float(str(weather['AWS_AMBIENT_humi']))))
+                self.pymlab(device="StatusLCD", method="puts", parameters="'rH:%.2f%% MLAB'" % (float(999.99)))
 
             elif self.mode[self.mode_id] == 'ip':
                 self.mode_count += 1
-                if self.mode_count > 2:
+                if self.mode_count > 0:
                     self.mode_count = 0
                     self.mode_id +=1
 
@@ -155,7 +168,7 @@ class i2clcd(UserInteface):
                 self.pymlab(device="StatusLCD", method="puts", parameters="'%s'" % (datetime.datetime.now().strftime("%H:%M:%S")))
 
         except Exception, e:
-            rospy.logerr(e)
+            rospy.logerr(repr(e))
 
 
 

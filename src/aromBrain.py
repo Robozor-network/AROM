@@ -15,15 +15,13 @@ import drivers
 #from drivers import devices
 #from drivers import camera
 #from drivers import focuser
-from drivers import weatherStation
+##from drivers import weatherStation
 #from drivers import rotator
 #from drivers import roof
 #import drivers
 
 
 class AromBrain():
-    def mountSlew(self, cor = [0,0]):
-        pass
 
     def __init__(self):
         rospy.init_node('AROM_brain')
@@ -51,22 +49,24 @@ class AromBrain():
         return 1
 
     def NodeInfo(self, srv):
+        print srv
 ##  Ziska parametry nodu dle jmena
-        if srv.mode == "GetNode":
-            return arom.srv.NodeInfoResponse(data = repr(self.devices['srv.data']), state = True)
+        if srv.type == "GetNode":
+            return arom.srv.NodeInfoResponse(data = repr(self.devices['srv.data']), done = True)
 
 ##  Ziska seznam vsech nodu s parametrama
-        elif srv.mode == "GetAllNodes":
-            return arom.srv.NodeInfoResponse(data = repr(self.devices), state = True)
+        elif srv.type == "GetAllNodes":
+            print self.devices
+            return arom.srv.NodeInfoResponse(data = repr(self.devices), done = True)
 
 ##  Ziska seznam nodu podle device .. napr podle mount, camera, ...
-        elif srv.mode == "GetDeviceNode":
-            rospy.logerr("Error: NotImplemented: %s" %(srv.mode))
-            return arom.srv.NodeInfoResponse(data = repr("Error: NotImplemented"), state = True)
+        elif srv.type == "GetDeviceNode":
+            rospy.logerr("Error: NotImplemented: %s" %(srv.type))
+            return arom.srv.NodeInfoResponse(data = repr("Error: NotImplemented"), done = True)
 
         else:
-            rospy.logerr("Error: Unknown data mode in 'srv.NodeInfo': %s" %(srv.mode))
-            return arom.srv.NodeInfoResponse(data = repr("Error: Unknown data mode in 'srv.NodeInfo'"), state = True)
+            rospy.logerr("Error: Unknown data type in 'srv.NodeInfo': %s" %(srv.type))
+            return arom.srv.NodeInfoResponse(data = repr("Error: Unknown data type in 'srv.NodeInfo'"), done = True)
 
 
     def loadDriver(self, deviceType = None, driverName = 'mount'):

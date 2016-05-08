@@ -12,7 +12,12 @@ from std_msgs.msg import Float32
 from arom.srv import *
 from arom.msg import *
 from astropy.time import Time
+
 import gphoto2 as gp
+
+import getopt
+import Image
+import unicap
 
 
 class Camera(object):
@@ -25,6 +30,7 @@ class Camera(object):
         self.civil_name = arg['civil_name']
         self.name = arg['name']
         self.variables = var
+        self.properties = {}
 
         ##
         ##  Inicializace vlastniho ovladace
@@ -96,7 +102,7 @@ class gphoto(Camera):
 
     def run(self):
         try:
-        	print "bla"
+            print "bla"
         except Exception, e:
             rospy.logerr(e)
 
@@ -148,6 +154,85 @@ class gphoto(Camera):
             }
         )
 
+######################################################################################
+######################################################################################
+##                                                                                  ##
+##                  Driver for --AWS01A-- MLAB weather station                      ##
+##                 ============================================                     ##
+##                                                                                  ##
+##                                                                                  ##
+######################################################################################
+        
+class ImaginSource(Camera):
+    def init(self):
+        self.device_id = False
+        self.filetype = 'jpg'
+        print "ImaginSource driver loaded"
+
+
+    def run(self):
+        try:
+            print "bla"
+            self.capture()
+        except Exception, e:
+            rospy.logerr(e)
+
+    def connect(self):
+        print "-s-----------------"
+        print "connect"
+        print unicap.enumerate_devices()
+        if not self.device_id:
+            self.device_id = unicap.enumerate_devices()[1]['identifier']
+
+        self.device = unicap.Device( self.device_id )
+
+        print self.device.enumerate_formats()
+
+        if self.filetype == 'jpg':
+            self.filetype = 'jpeg'
+
+        props = self.device.enumerate_properties()
+        print "----", props
+        for prop in props:
+            print prop['identifier'], ">>", prop
+
+        try:
+            prop = self.device.get_property( 'frame rate' )
+            prop['value'] = 5.0
+            self.device.set_property( prop )
+        except Exception, e:
+            print e
+
+        try:
+            prop = self.device.get_property( 'shutter' )
+            prop['value'] = 29.0
+            self.device.set_property( prop )
+        except Exception, e:
+            print e
+
+
+        try:
+            prop = self.device.get_property( 'Gain' )
+            prop['value'] = 32.0
+            self.device.set_property( prop )
+        except Exception, e:
+            print e
+        
+
+        self.device.start_capture()
+
+    def capture(self, name = "aaa.jpg", imgnum = 5, maximgnum = 10):
+        try:
+            buf = self.device.wait_buffer(60)
+            print buf
+        
+            rgbbuf = buf.convert( 'RGB3' )
+
+            img = Image.fromstring( 'RGB', rgbbuf.format['size'], rgbbuf.tostring() )
+            img.save( name, self.filetype )
+            
+        except Exception, e:
+            print e
 
 
 

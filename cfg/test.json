@@ -34,6 +34,14 @@
         "_path_structure": "std"
     },
     {
+        "type": "camera",
+        "name": "dfk",
+        "civil_name": "Kamera DFK",
+        "parent": "dalekohled",
+        "port": "",
+        "driver": "ImaginSource"
+    },
+    {
         "type": "focuser",
         "name": "cam_camera",
         "parent": "cam_camera",
@@ -43,6 +51,16 @@
         "type": "weatherStation",
         "name": "aws",
         "driver": "AWS01B"
+    },
+    {
+        "type": "weatherStation",
+        "name": "wu",
+        "driver": "WEATHERCLOUD"
+    },
+    {
+        "type": "weatherStation",
+        "name": "dd",
+        "driver": "DEWDEFF01A"
     },
     {
         "type": "userInterface",

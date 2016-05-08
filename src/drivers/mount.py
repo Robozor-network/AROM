@@ -53,7 +53,6 @@ class mount():
         self.mountParams['trackingOffTime'] = Time.now()
         self.mountParams['trackingOffCoordinates'] = self.mountParams['coordinates'].transform_to(AltAz(obstime = Time.now(), location=self.observatory['coordinates'])).to_string('dms')
 
-
         self.init_time = Time.now()
         self.DayLenght = {
                         'solar': (24.0*60*60),
@@ -107,15 +106,11 @@ class mount():
         ###    Ovladac pujde ukoncit
         ###**************************************************
 
-        rate = rospy.Rate(1)
+        rate = rospy.Rate(10)
         while not rospy.is_shutdown():
-            slew_err = 0.01
-            if self.newTarget > 0:
-                pass
-            pos = self.getPosition()
-            posaltaz = pos.transform_to(AltAz(obstime = Time.now(), location=self.observatory['coordinates']))
-            self.pub_mount_position.publish("%f;%f;%f;%f;" %(pos.ra.degree, pos.dec.degree, pos.altaz.alt.degree, posaltaz.az.degree))
-            
+            #pos = self.getPosition('mount')
+            #posaltaz = pos.transform_to(AltAz(obstime = Time.now(), location=self.observatory['coordinates']))
+            #self.pub_mount_position.publish("%f;%f;%f;%f;" %(pos.ra.degree, pos.dec.degree, posaltaz.alt.degree, posaltaz.az.degree))
             rate.sleep()
         
         self.stop()
@@ -129,6 +124,7 @@ class mount():
 
     def recieveHandler(self, msg):
         if msg.type == 'function':
+            print msg.name
             try:
                 if msg.data != '':
                     result = getattr(self, str(msg.name))(eval(msg.data))
@@ -205,10 +201,15 @@ class mount():
             coord = SkyCoord(alt=float(param['alt']), az=float(param['az']), frame='altaz', unit='deg', obstime = Time.now(), location = self.observatory['coordinates']).icrs
         print "request on 'advSync", param, coord
         self.mountParams['coordinates'] = coord
+        self.sync()
 
     def sync(self, param = None):
         param = eval(param)
         self.mountParams['coordinates'] = SkyCoord(ra=param.ra, dec=param.dec, unit='degree', obstime=Time.now(), frame='icrs')
+        if not self.mountParams['tracking']:
+            self.mountParams['trackingOffTime'] = Time.now()
+            altazframe = AltAz(obstime = self.mountParams['trackingOffTime'], location=self.observatory['coordinates'])
+            self.mountParams['trackingOffCoordinates'] = self.mountParams['coordinates'].transform_to(altazframe).to_string('dms')
 
     def advTrack(self, param = None):
         param = eval(param)
@@ -377,6 +378,7 @@ class EQmod(mount):
         self.driverSyncTime = Time.now()
         self.coord_instrument_old = (0,0,Time.now())
 
+
         ##
         ##  Registrace ovladace jako mount
         ##
@@ -486,17 +488,26 @@ class EQmod(mount):
 
         rospy.loginfo("Steps per revolution: %s and per degree %s" %(repr(self.mountParams['StepsPerRev']), repr(self.mountParams['StepsPerDeg'])))
         
-
         print "getPosition('SkyCoord') >> ", self.getPosition("SkyCoord")
         self.getPosition()
-
         self.coord_instrument_old = (0,self.stepsPerRev[1]/2,Time.now())
+        self._axisCountReset()
 
+    def _axisCountReset(self):
+        self.mountParams['RefData_ax1'] = self.Revu24str2long(self._GetData(self.GetAxisPosition, self.Axis1))
+        self.mountParams['RefData_ax2'] = self.Revu24str2long(self._GetData(self.GetAxisPosition, self.Axis2))
+        self.mountParams['RefData_time'] = Time.now()
+        altazframe = AltAz(obstime = self.mountParams['RefData_time'], location=self.observatory['coordinates'])
+        self.mountParams['RefData_coordination'] = self.mountParams['coordinates'].transform_to(altazframe).to_string('dms')
+
+    def _axisCountPos(self):
+        return self.getPosition('mount')
 
     def slew(self, target = [None, None], unit = 'deg'):
         if target[0] != None and target[1] != None:
             self.mountParams['coordinates_target'] = SkyCoord(int(target[0]), int(target[1]), unit = unit)
             self.setPosition()
+
 
     def track(self, param = None):
         if self.mountParams['tracking'] == True:
@@ -574,15 +585,15 @@ class EQmod(mount):
 
     def setPosition(self, param = None):
         try:
-            self.getPosition()
-            print "spocitana poloha:", self.getPosition()
+            actual = self.getPosition('mount')
+            print "spocitana poloha:", actual
             print "cilova    poloha:", self.mountParams['coordinates_target']
             change = [0,0]
-            change[0] = Angle(Angle(self.mountParams['coordinates_target'].ra) - Angle(self.getPosition().ra))
-            change[1] = Angle(Angle(self.mountParams['coordinates_target'].dec) - Angle(self.getPosition().dec)).wrap_at('90d')
+            change[0] = Angle(Angle(self.mountParams['coordinates_target'].ra) - Angle(actual.ra))
+            change[1] = Angle(Angle(self.mountParams['coordinates_target'].dec) - Angle(actual.dec)).wrap_at('90d')
 
             print "****************** SET POSITION **********************"
-            rospy.loginfo( "Delta: [%s, %s] start: [%s] cil: [%s]"%( str(change[0].degree),str(change[1].degree) , str(self.getPosition().to_string('dms')), str(self.mountParams['coordinates_target'].to_string('dms'))))
+            rospy.loginfo( "Delta: [%s, %s] start: [%s] cil: [%s]"%( str(change[0].degree),str(change[1].degree) , str(actual.to_string('dms')), str(self.mountParams['coordinates_target'].to_string('dms'))))
 
             ##
             ## Vyber smeru otaceni
@@ -653,6 +664,13 @@ class EQmod(mount):
                     print e
 
 
+            #self.mountParams['RefData_ax1'] = self._GetData(self.GetAxisPosition, self.Axis1)
+            #self.mountParams['RefData_ax2'] = self._GetData(self.GetAxisPosition, self.Axis2)
+            #self.mountParams['RefData_time'] = Time.now()
+            #self.mountParams['RefData_coordination'] = self.mountParams['coordinates_target'].transform_to(altazframe).to_string('dms')
+            self._axisCountReset()
+
+
         except Exception, e:
             rospy.logerr("Error in setCoordinates: %s" %(e))
             #print e
@@ -661,11 +679,11 @@ class EQmod(mount):
         return self.mountParams['coordinates_target']
 
     def getPosition(self, Type = None):
-        if self.mountParams['tracking'] == True:
-            coordinates = self.mountParams['coordinates']
-        elif self.mountParams['tracking'] == False:
-            print "---------------------------  ", self.mountParams['trackingOffCoordinates']
-            coordinates = SkyCoord(self.mountParams['trackingOffCoordinates'], unit='deg', obstime = Time.now(), frame = 'altaz', location = self.observatory['coordinates']).icrs
+        #if self.mountParams['tracking'] == True:
+        coordinates = self.mountParams['coordinates']
+        #elif self.mountParams['tracking'] == False:
+        #    print "---------------------------  ", self.mountParams['trackingOffCoordinates']
+        #    coordinates = SkyCoord(self.mountParams['trackingOffCoordinates'], unit='deg', obstime = Time.now(), frame = 'altaz', location = self.observatory['coordinates']).icrs
 
         if Type == None:
             try:
@@ -685,6 +703,18 @@ class EQmod(mount):
                 return coordinates
             except Exception, e:
                 rospy.logerr("Error in getPosition: %s" %(e))
+
+        elif Type == 'mount':
+            ax_1 = self.Revu24str2long(self._GetData(self.GetAxisPosition, self.Axis1))
+            ax_2 = self.Revu24str2long(self._GetData(self.GetAxisPosition, self.Axis2))
+            Delta_time = Time.now().unix - self.mountParams['RefData_time'].unix
+            Delta_ra = Angle((int(self.mountParams['RefData_ax1']) - int(ax_1)) / self.mountParams['StepsPerDeg'][0], unit='deg')
+            Delta_dec= Angle((int(self.mountParams['RefData_ax2']) - int(ax_2)) / self.mountParams['StepsPerDeg'][1], unit='deg').wrap_at('90d')
+            print "rozdil zpusobeny casem:", Angle(float(Delta_time)*(15.0/3600.0), unit='deg')
+            print "rozdil zpusobeny montazi:", Delta_ra, Delta_dec
+            out = SkyCoord(coordinates.ra + Delta_ra, (coordinates.dec + Delta_dec).wrap_at('90d'))
+            print out
+            return out
 
         elif Type == 'SkyCoord':
             return coordinates

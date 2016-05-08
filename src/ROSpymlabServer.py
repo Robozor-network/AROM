@@ -128,6 +128,9 @@ class pymlab_server():
         try:
             if parameters == "" or parameters == None:
                 reval = getattr(self.devices[cfg.device], cfg.method)()
+            elif isinstance(eval(parameters), tuple):
+                print "tuple eoeoeoeoeeoeeoe", eval(parameters)
+                reval = getattr(self.devices[cfg.device], cfg.method)(*eval(parameters))
             else:
                 reval = getattr(self.devices[cfg.device], cfg.method)(eval(parameters))
             self.pymlab_read = False
