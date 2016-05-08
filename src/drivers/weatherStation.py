@@ -441,7 +441,7 @@ class AWS01B(weatherStation):
 ##                                                                                  ##
 ######################################################################################
         
-class WEATHERCLOUD(weatherDataUploader):
+class WEATHERUNDERGROUND(weatherDataUploader):
     def init(self):
         pass
 
@@ -449,9 +449,9 @@ class WEATHERCLOUD(weatherDataUploader):
         pass
 
     def datapush(self, data):
-        req = "?ID=IJIHOESK11&PASSWORD=**heslo**&dateutc=now"
+        req = "?ID=%s&PASSWORD=%s&dateutc=now" %(self.arg['id'], self.arg['pass'])
         for row in data:
-            print row
+            #print row
             try:
                 val = float(row[1])
                 sourceType = row[3]

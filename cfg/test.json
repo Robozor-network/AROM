@@ -56,8 +56,8 @@
         "type": "weatherStation",
         "name": "wu",
         "driver": "WEATHERUNDERGROUND",
-        "id": "station id",
-        "pass": "user passworld"
+        "id": "IJIHOESK11",
+        "pass": "pass"
     },
     {
         "type": "weatherStation",
