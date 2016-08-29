@@ -4,13 +4,13 @@ import rospy
 import pymlab
 from pymlab import config
 import sys
-import sensor_server
+import arom
 from std_msgs.msg import String
 from std_msgs.msg import Float32
 import std_msgs
 import time
-from sensor_server.srv import *
-from sensor_server.msg import *
+from arom.srv import *
+from arom.msg import *
 
 
 def server(req):
@@ -82,7 +82,7 @@ class pymlab_server():
             rate = rospy.Rate(self.rate)
             AutoInputs = self.AutoInputs
             devices = self.devices
-            sender = rospy.Publisher('pymlab_data', SensorValues, queue_size=20)
+            #sender = rospy.Publisher('pymlab_data', SensorValues, queue_size=20)
             values = {}
             for x in AutoInputs:
                 for y in AutoInputs[x]:
@@ -129,7 +129,7 @@ class pymlab_server():
             if parameters == "" or parameters == None:
                 reval = getattr(self.devices[cfg.device], cfg.method)()
             elif isinstance(eval(parameters), tuple):
-                print "tuple eoeoeoeoeeoeeoe", eval(parameters)
+                print "tuple:", eval(parameters)
                 reval = getattr(self.devices[cfg.device], cfg.method)(*eval(parameters))
             else:
                 reval = getattr(self.devices[cfg.device], cfg.method)(eval(parameters))
