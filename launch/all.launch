@@ -1,0 +1,30 @@
+<launch>
+    <rosparam
+        command="load"
+        file="/home/odroid/robozor-zvpp.yaml" />
+    <node
+        name="pymlab"
+        pkg="arom"
+        type="ROSpymlabServer.py"
+    />
+    <node
+        name="pymlab_init"
+        pkg="arom"
+        type="initPymlab.py"
+    />
+    <node
+        name="aws_collector"
+        pkg="arom"
+        type="aws_collector.py"
+    />
+    <node
+        name="aws_wu"
+        pkg="arom"
+        type="aws_weatherunderground.py"
+    />
+    <node
+        name="mount"
+        pkg="arom"
+        type="mount.py"
+    />
+</launch>
