@@ -17,7 +17,8 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
    FILES
    DriverControlm.msg
-   PymlabServerStatusM.msg # pro inicializaci PYMLAB serveru
+   msg_pymlabInit.msg # pro inicializaci PYMLAB serveru
+   msg_WeatherStation.msg
 #   Message1.msg
 #   Message2.msg
 )
