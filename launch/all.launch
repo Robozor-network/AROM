@@ -8,6 +8,11 @@
         type="ROSpymlabServer.py"
     />
     <node
+        name="IR_ui"
+        pkg="arom"
+        type="irUI.py"
+    />
+    <node
         name="pymlab_init"
         pkg="arom"
         type="initPymlab.py"

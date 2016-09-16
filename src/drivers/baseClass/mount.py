@@ -2,6 +2,7 @@
 
 import math
 import time
+import datetime
 import rospy
 import std_msgs
 import actionlib
@@ -11,6 +12,8 @@ from std_msgs.msg import Float32
 from arom.srv import *
 from arom.msg import *
 import numpy as np
+
+
 
 from pydirectmount.drive import drive
 
@@ -61,6 +64,8 @@ class mount(object):
         print "zinicializovano"
 
         rate = rospy.Rate(self.rate)
+        ra = 0
+        dec = 90
         while not rospy.is_shutdown():
             try:
                 if len(btn_data) > 0:
@@ -68,11 +73,50 @@ class mount(object):
                     lastBtn = btn_data[0]
                     btn_data.pop(0)
 
-                    if lastBtn == 'KEY_OK':
-                        self.mount.Slew(get_sun(Time.now()))
+                    if "altaz" in lastBtn:
+                        split = lastBtn.split(" ")
+                        self.mount.Slew(SkyCoord(alt = float(split[1]), az = float(split[2]), obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
+                        
+
+                    elif lastBtn == 'KEY_OK':
+                        self.mount.Slew(SkyCoord(alt = 1, az = 180+45+90, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
+                        
+
+                        #now = Time.now()                                  
+                        #altazframe = AltAz(obstime=now, location=self.mount.getObs())                                               
+                        #sunaltaz = get_sun(now).transform_to(altazframe)  
+                        #print sunaltaz, altazframe, now
+                        #self.mount.Slew(SkyCoord(get_sun(Time.now()), location = self.mount.getObs()).icrs)
 
                     if lastBtn == 'KEY_UP':
-                        self.mount.Slew(SkyCoord(alt = 45, az = 45, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
+                        dec += 10
+                        self.mount.Slew(SkyCoord(ra = ra, dec=dec, unit="deg"))
+                        #self.mount.Slew(SkyCoord(alt = 45, az = 181+90, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
+                        # mode: -90 - 0
+
+                    if lastBtn == 'KEY_DOWN':
+                        dec -= 10
+                        self.mount.Slew(SkyCoord(ra = ra, dec=dec, unit="deg"))
+                        #self.mount.Slew(SkyCoord(alt = 45, az = 181+45, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
+                        # mode: -180 - -90
+
+                    if lastBtn == 'KEY_LEFT':
+                        ra += 10
+                        self.mount.Slew(SkyCoord(ra = ra, dec=dec, unit="deg"))
+                        #self.mount.Slew(SkyCoord(alt = 45, az = 181, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
+                        #mode: -90 - 0
+
+                    if lastBtn == 'KEY_RIGHT':
+                        ra -= 10
+                        self.mount.Slew(SkyCoord(ra = ra, dec=dec, unit="deg"))
+                        #self.mount.Slew(SkyCoord(alt = 1, az = 181+90, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
+                        #mode: -180 - -90
+
+                    if lastBtn == 'KEY_MENU':
+                        self.mount.Slew(SkyCoord(alt = 1, az = 181+45, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
+
+                    if lastBtn == 'KEY_TAB':
+                        self.mount.Slew(SkyCoord(alt = 1, az = 181, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
 
                     elif lastBtn == 'KEY_F3':
                         self.mount.GoPark()
