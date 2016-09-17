@@ -24,6 +24,8 @@ from astropy.coordinates import ICRS, Galactic, FK4, FK5, AltAz  # Low-level fra
 from astropy.coordinates import Angle, Latitude, Longitude  # Angles
 from astropy.coordinates import EarthLocation
 from astropy.coordinates import get_sun
+from astropy.coordinates import solar_system_ephemeris
+#from astroquery.simbad import Simbad
 
 btn_data = []
 
@@ -73,15 +75,21 @@ class mount(object):
                     lastBtn = btn_data[0]
                     btn_data.pop(0)
 
-                    if "altaz" in lastBtn:
+                    if "name" in lastBtn:
+                        split = lastBtn.split(" ")
+                        self.mount.Slew(SkyCoord.from_name(split[1]))
+                        #self.mount.Slew(SkyCoord(alt = float(split[1]), az = float(split[2]), obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
+                    elif "solar" in lastBtn:
+                        split = lastBtn.split(" ")
+                        self.mount.Slew(SkyCoord.get_body(split[1], obstime = Time.now(), location = self.mount.getObs()).icrs)
+                    
+                    elif "altaz" in lastBtn:
                         split = lastBtn.split(" ")
                         self.mount.Slew(SkyCoord(alt = float(split[1]), az = float(split[2]), obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
                         
-
                     elif lastBtn == 'KEY_OK':
                         self.mount.Slew(SkyCoord(alt = 1, az = 180+45+90, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
                         
-
                         #now = Time.now()                                  
                         #altazframe = AltAz(obstime=now, location=self.mount.getObs())                                               
                         #sunaltaz = get_sun(now).transform_to(altazframe)  
@@ -118,7 +126,7 @@ class mount(object):
                     if lastBtn == 'KEY_TAB':
                         self.mount.Slew(SkyCoord(alt = 1, az = 181, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
 
-                    elif lastBtn == 'KEY_F3':
+                    elif lastBtn == 'KEY_F3' or lastBtn == 'home':
                         self.mount.GoPark()
 
                     elif lastBtn == 'KEY_PLAY':

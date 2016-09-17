@@ -71,7 +71,7 @@ class pymlab_server():
         print ecfg
 
         if "start" in ecfg:
-            rospy.loginfo("Starting PyMLAB ROS servre with: %s" %(repr(self.devices)))
+            rospy.loginfo("Starting PyMLAB ROS server with: %s" %(repr(self.devices)))
             self.status = True
             rate = rospy.Rate(0.1)
             #AutoInputs = self.AutoInputs
@@ -110,13 +110,14 @@ class pymlab_server():
             if parameters == "" or parameters == None:
                 reval = getattr(self.devices[cfg.device], cfg.method)()
             elif isinstance(eval(parameters), tuple):
-                print "Tuple:", eval(parameters)
+                print "#Tuple:", eval(parameters)
                 reval = getattr(self.devices[cfg.device], cfg.method)(*eval(parameters))
-            elif isinstance(eval(parameters), tuple):
-                print "Dictionary:", eval(parameters)
+            elif isinstance(eval(parameters), dict):
+                print "#Dictionary:", eval(parameters)
                 reval = getattr(self.devices[cfg.device], cfg.method)(**eval(parameters))
             else:
                 reval = getattr(self.devices[cfg.device], cfg.method)(eval(parameters))
+                print "#None"
             self.pymlab_read = False
             return str(reval)
         except Exception, e:

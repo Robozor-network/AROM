@@ -53,10 +53,10 @@ if __name__ == "__main__":
                     "name":           "AWS_clouds",
                     "type":           "thermopile01",
                     "address":        0x5d,
+                },{
+                    "name":           "StatusLCD",
+                    "type":           "i2clcd"
                 }#,{
-                #    "name":           "StatusLCD",
-                #    "type":           "i2clcd"
-                #}#,{
                 #    "name":           "AWS_humi_in",
                 #    "type":           "sht25"
                 #}#,{
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     
     i2c2 = str({
             "device": "serial",
-            "port": '/dev/ttyUSB1',
+            "port": '/dev/ttyUSB2',
         })
     bus2 = str([
                 {
