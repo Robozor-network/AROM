@@ -29,17 +29,19 @@ def weatherUploader():
     while data == {} and not rospy.is_shutdown():
         time.sleep(0.25)
     while not rospy.is_shutdown():
+        try:
+            req = "?ID=%s&PASSWORD=%s&dateutc=now&softwaretype=AROM-AWS" %(ID , PASSWORD)
+            req += "&tempf=%f" %(data['temperatureAWS0']*9/5+32)
+            req += "&dewptf=%f" %(data['dewpointAWS']*9/5+32)
+            req += "&humidity=%f" %(data['humidityAWS0'])
+            req += "&winddir=%f" %(data['winddirAWS'])
+            req += "&windspeedmph=%f" %(data['windspdAWS'])
+            req += "&baromin=%f" %(data['pressureAWS']*0.0002952998751)
 
-        req = "?ID=%s&PASSWORD=%s&dateutc=now&softwaretype=AROM-AWS" %(ID , PASSWORD)
-        req += "&tempf=%f" %(data['temperatureAWS0']*9/5+32)
-        req += "&dewptf=%f" %(data['dewpointAWS']*9/5+32)
-        req += "&humidity=%f" %(data['humidityAWS0'])
-        req += "&winddir=%f" %(data['winddirAWS'])
-        req += "&windspeedmph=%f" %(data['windspdAWS'])
-        req += "&baromin=%f" %(data['pressureAWS']*0.0002952998751)
-
-        rospy.loginfo("Uploading data to weatherudnerground.com: %s" %repr(req))
-        resp, content = httplib2.Http().request("http://weatherstation.wunderground.com/weatherstation/updateweatherstation.php"+req)
+            rospy.loginfo("Uploading data to weatherudnerground.com: %s" %repr(req))
+            resp, content = httplib2.Http().request("http://weatherstation.wunderground.com/weatherstation/updateweatherstation.php"+req)
+        except Exception, e:
+            rospy.logerr(e)
 
         rate.sleep()
 

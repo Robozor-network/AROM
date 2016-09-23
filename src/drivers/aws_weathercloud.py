@@ -31,24 +31,27 @@ def weatherUploader():
     while data == {} and not rospy.is_shutdown():
         time.sleep(0.25)
     while not rospy.is_shutdown():
-        post_data = {'name':"ZVPP",
-                     'ver': '001',
-                     'wid': wid,
-                     'key': key,
-                     'time': time.strftime("%H%M", time.localtime()),
-                     'bar': int(data['pressureAWS']*0.1),
-                     'hum': int(data['humidityAWS0']*1),
-                     'temp': int(data['temperatureAWS0']*10),
-                     'dew': int(data['dewpointAWS']*10),
-                     'wspd': int(data['windspdAWS']*10),
-                     'wdir': int(data['winddirAWS']*1),
-                     'solarrad': int(data['lightAWS']*10),
-                     }
+        try:
+            post_data = {'name':"ZVPP",
+                         'ver': '001',
+                         'wid': wid,
+                         'key': key,
+                         'time': time.strftime("%H%M", time.localtime()),
+                         'bar': int(data['pressureAWS']*0.1),
+                         'hum': int(data['humidityAWS0']*1),
+                         'temp': int(data['temperatureAWS0']*10),
+                         'dew': int(data['dewpointAWS']*10),
+                         'wspd': int(data['windspdAWS']*10),
+                         'wdir': int(data['winddirAWS']*1),
+                         'solarrad': int(data['lightAWS']*10),
+                         }
 
 
-        rospy.loginfo("Uploading data to weathercloud.net: %s" %repr(post_data))
-        print httplib2.Http().request("http://api.weathercloud.net/v01/set?" + urllib.urlencode(post_data), 'GET')
+            rospy.loginfo("Uploading data to weathercloud.net: %s" %repr(post_data))
+            print httplib2.Http().request("http://api.weathercloud.net/v01/set?" + urllib.urlencode(post_data), 'GET')
 
+        except Exception, e:
+            rospy.logerr(e)
         rate.sleep()
 
 

@@ -9,6 +9,7 @@ import actionlib
 import json
 from std_msgs.msg import String
 from std_msgs.msg import Float32
+from std_msgs.msg import Float32MultiArray
 from arom.srv import *
 from arom.msg import *
 import numpy as np
@@ -58,9 +59,10 @@ class mount(object):
 
         #self.mount.Slew(SkyCoord(alt = 45, az = 10, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
 
-        rospy.Subscriber("/mount/controll", String, callback)
+        rospy.Subscriber("/mount/controll", String, callback_btn)
         rospy.Subscriber("/arom/UI/buttons", String, callback_btn)
         self.pub_status = rospy.Publisher('/mount/status', String, queue_size=10)
+        self.pub_radec  = rospy.Publisher('/mount/status/coordinates/RaDec', Float32MultiArray, queue_size=10)
 
         rospy.init_node('AROM_mount')
         print "zinicializovano"
@@ -126,11 +128,29 @@ class mount(object):
                     if lastBtn == 'KEY_TAB':
                         self.mount.Slew(SkyCoord(alt = 1, az = 181, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
 
-                    elif lastBtn == 'KEY_F3' or lastBtn == 'home':
+                    elif lastBtn == 'KEY_STOP' or lastBtn == 'home':
                         self.mount.GoPark()
 
                     elif lastBtn == 'KEY_PLAY':
                         self.mount.UnPark()
+                else:
+                    #(ra, dec) = self.mount.getCoordinates('RaDec')
+                    #print ra, dec
+
+                    #try:
+                    #    mat = Float32MultiArray(data=[ra, dec])
+                    #    self.pub_radec.publish(mat)
+
+                    #except Exception, e:
+                    #    print e
+                    #mat = Float32MultiArray(data=[ra, dec])
+                        #mat.layout.dim.append(MultiArrayDimension())
+                        #mat.layout.dim[0].label = "RaDec"
+                        #mat.layout.dim[0].size = 2
+                        #mat.data.
+                    #print mat
+                    #self.pub_radec.publish(mat)
+                    pass
 
 
             except Exception, e:

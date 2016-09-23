@@ -1,0 +1,48 @@
+<application text="AROM menu">
+  <settings lcdBackground="On" />
+  <folder text="System Info">
+    <widget text="Show Date/Time" function="ShowDateTime" />
+    <widget text="Network" function="getNetwork"/>
+    <widget text="Weather" function="getWeather"/>
+    <widget text="System informat." function="getSys"/>
+    <folder text="Mount">
+      <widget text="Location" function="LcdRed" />
+      <widget text="Green" function="LcdGreen" />
+      <widget text="Blue" function="LcdBlue" />
+      <widget text="Yellow" function="LcdYellow" />
+      <widget text="Teal" function="LcdTeal" />
+      <widget text="Violet" function="LcdViolet" />
+      <widget text="White" function="LcdOn" />
+      <widget text="Off" function="LcdOff" />
+    </folder>
+    <run text="Run ls">ls</run>
+    <widget text="Enter a word" function="EnterWord" />
+  </folder>
+  <folder text="Sensors">
+    <folder text="Compass/Gyro">
+      <widget text="View Accelerate" function="CompassGyroViewAcc" />
+      <widget text="View Magnetics" function="CompassGyroViewMag" />
+      <widget text="View Heading" function="CompassGyroViewHeading" />
+      <widget text="View Temp" function="CompassGyroViewTemp" />
+      <widget text="Calibrate" function="CompassGyroCalibrate" />
+      <widget text="Calibrate Clear" function="CompassGyroCalibrateClear" />
+    </folder>
+    <folder text="Temp/Baro">
+      <widget text="View Info" function="TempBaroView" />
+      <widget text="Calibrate" function="TempBaroCalibrate" />
+    </folder>
+  </folder>
+  <folder text="Astronomy">
+    <widget text="Alt/Az, RA/Decl" function="AstroViewAll" />
+    <widget text="Alt/Az" function="AstroViewAltAz" />
+    <widget text="RA/Decl" function="AstroViewRADecl" />
+  </folder>
+  <folder text="Camera">
+    <widget text="Detect" function="CameraDetect" />
+    <widget text="Take Picture" function="CameraTakePicture" />
+    <widget text="Time Lapse" function="CameraTimeLapse" />
+  </folder>
+  <widget text="Quit" function="DoQuit" />
+  <widget text="Reboot" function="DoReboot" />
+  <widget text="Shutdown" function="DoShutdown" />
+</application>

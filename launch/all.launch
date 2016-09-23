@@ -28,8 +28,18 @@
         type="aws_weatherunderground.py"
     />
     <node
+        name="aws_wc"
+        pkg="arom"
+        type="aws_weathercloud.py"
+    />
+    <node
         name="mount"
         pkg="arom"
         type="mount.py"
+    />
+    <node
+        name="lcd_info"
+        pkg="arom"
+        type="lcdInfo.py"
     />
 </launch>

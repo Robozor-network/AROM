@@ -2,6 +2,7 @@
 
 import rospy
 import time
+import math
 from arom.srv import *
 from arom.msg import *
 from baseClass.aws import weatherStation
@@ -28,6 +29,7 @@ class aws_collector(weatherStation):
 
     def mesure(self):
         temperatureAWS0     = eval(self.pymlab(device="AWS_temp_ref", method="get_temp").value) # LTS
+        temperatureTEL0     = eval(self.pymlab(device="telescope_lts", method="get_temp").value) # LTS
         (temperatureAWS1, humidityAWS0) = eval(self.pymlab(device="AWS_humi",     method="get_TempHum").value) # SHT31
         windspdAWS          = eval(self.pymlab(device="AWS_wind_s",   method="get_speed").value) # RPS
         (x, y, z)           = eval(self.pymlab(device="AWS_wind_d",   method="axes").value) # MAG
@@ -36,9 +38,18 @@ class aws_collector(weatherStation):
         #clouds = self.pymlab(device="AWS_clouds", method="getRawData").value
         #clouds2 = self.pymlab(device="AWS_clouds", method="getTambient").value
         #print "#####", clouds, x, y, z
-        winddirAWS = 0
-        type = ["temperatureAWS1", "temperatureAWS0", "dewpointAWS", "humidityAWS0", "windspdAWS", "winddirAWS", "lightAWS", "temperatureAWS2", "pressureAWS"]
-        data = [temperatureAWS1, temperatureAWS0, calc_dewpoint(temperatureAWS0, humidityAWS0), humidityAWS0, windspdAWS, winddirAWS, lightAWS, temperatureAWS2, pressureAWS]
+        if y > 0:
+            winddirAWS = 90 - (math.atan(x/y))*180.0/math.pi
+        elif y < 0:
+            winddirAWS = 270 - (math.atan(x/y))*180.0/math.pi
+        elif y == 0 & x < 0:
+            winddirAWS =  180.0
+        elif y == 0 & x > 0:
+            winddirAWS = 0.0
+
+
+        type = ["temperatureAWS1", "temperatureAWS0", "dewpointAWS", "humidityAWS0", "windspdAWS", "winddirAWS", "lightAWS", "temperatureAWS2", "pressureAWS", "temperatureTEL0"]
+        data = [temperatureAWS1, temperatureAWS0, calc_dewpoint(temperatureAWS0, humidityAWS0), humidityAWS0, windspdAWS, winddirAWS, lightAWS, temperatureAWS2, pressureAWS, temperatureTEL0]
         print data
         return (type, data)
         
