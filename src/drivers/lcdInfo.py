@@ -1,16 +1,19 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import math
 import time
 import rospy
 import std_msgs
 import json
+import os
 from std_msgs.msg import String
 from std_msgs.msg import Float32
 from arom.srv import *
 from arom.msg import *
 import numpy as np
 import pylirc
+from __init__ import AromNode
 
 try:
     import xml.etree.cElementTree as ET
@@ -31,8 +34,25 @@ def callback_btn(recive):
     btn_data.append(recive.data)
     #print recive, btn_data
 
-class lcdInfo16x2(object):
+class lcdInfo16x2(AromNode):
+    node_name = "lcdInfo16x2"
+    node_type = "lcd_text"
+    node_pymlab = True
+
     def __init__(self, rows = 2, cols = 2, file = None):
+        print os.path.abspath(__file__)
+
+        rospy.Subscriber("/aws_out", msg_WeatherStation, callback_aws)
+        rospy.Subscriber("/arom/UI/buttons", String, callback_btn)
+        self.lcdText_pub = rospy.Publisher('/arom/node/lcdText', std_msgs.msg.String, queue_size=10)
+
+
+        AromNode.__init__(self)
+
+        ##
+        ##  Konec zakladni inicializace
+        ##
+
         self.rows = rows
         self.cols = cols
         self.loadCFG(file)
@@ -40,23 +60,18 @@ class lcdInfo16x2(object):
         self.menu_row_path = "./"
         self.runningApp = None
 
-        rospy.Subscriber("/aws_out", msg_WeatherStation, callback_aws)
-        rospy.Subscriber("/arom/UI/buttons", String, callback_btn)
-        self.pymlab = rospy.ServiceProxy('pymlab_drive', PymlabDrive)
-        rospy.init_node('lcd_info_1620')
         print "zinicializovano"
 
         self.pymlab(device="StatusLCD",   method="reset")
         self.pymlab(device="StatusLCD",   method="init")
         self.pymlab(device="StatusLCD",   method="clear")
         self.pymlab(device="StatusLCD",   method="home")
-        
+
         time.sleep(0.5)
         self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineA="Welcome...", lineB="AROM     MLAB.cz")))
-        
+
         print "-------------"
         self.root = self.tree.getroot()
-
 
 
         rate = rospy.Rate(10)
@@ -81,9 +96,14 @@ class lcdInfo16x2(object):
 
                     elif lastBtn == 'KEY_F2':  # Back
                         self.back()
-                        
+
             except Exception, e:
                 print e
+
+    def setLCD(self, lineA, lineB):
+        self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineA=str(lineA), lineB=str(lineB))))
+        self.lcdText_pub.publish(str(lineA)+"\n"+str(lineB))
+
 
     def up(self):
         self.menu_row_id += 1
@@ -97,27 +117,20 @@ class lcdInfo16x2(object):
         self.display()
 
     def enter(self):
-        print "### enter", self.menu_selected_row.tag
         if self.menu_selected_row.tag == 'folder':
-            print "select menu", self.menu_selected_row
             self.menu_row_path += "folder[@text='%s']/" %(self.menu_selected_row.attrib['text'])
-            print self.menu_row_path
-            print self.menu_selected_row
             self.menu_row_id = 0
             self.display()
         elif self.menu_selected_row.tag == 'widget':
-            print "widget", self.menu_selected_row.attrib
-            self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineB="Loading ...", lineA="widget")))
+            self.setLCD(lineB="Loading ...", lineA="widget")
             time.sleep(0.25)
-            #self.runningApp = self.menu_selected_row.attrib['function']
             getattr(self, self.menu_selected_row.attrib['function'])()
 
         elif self.menu_selected_row.tag == 'attrib':
-            print "blablablabla"
-            self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineB="ahoj :)", lineA="Super !!!")))
+            self.setLCD(lineB="ahoj :)", lineA="Super !!!")
 
         else:
-            self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineB=str("Err 001"), lineA="AROM     Error")))
+            self.setLCD(lineB=str("Err 001"), lineA="AROM     Error")
 
 
     def back(self):
@@ -127,19 +140,16 @@ class lcdInfo16x2(object):
     def display(self):
         try:
             out = self.root.findall(self.menu_row_path)
-            print "#", out[self.menu_row_id].tag, out[self.menu_row_id].attrib
             self.menu_selected_row = out[self.menu_row_id]
             if self.menu_selected_row.tag == 'folder':
                 text = '.' + out[self.menu_row_id].attrib['text']
             elif self.menu_selected_row.tag == 'widget':
                 text = '>' + out[self.menu_row_id].attrib['text']
-            #id = str(self.menu_row_id)
-            lineB = text#.ljust(15-len(id))+" "+id
-            self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineB=lineB, lineA="AROM  MLAB.cz"+" "+str(self.menu_row_id))))
+            self.setLCD(lineB=text, lineA="AROM  MLAB.cz"+" "+str(self.menu_row_id))
 
         except Exception, e:
             rospy.logerr(e)
-            self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineB=str(e), lineA="AROM     Error")))
+            self.setLCD(lineB=str(e), lineA="AROM     Error")
 
 
     def loadCFG(self, file = None):
@@ -153,7 +163,7 @@ class lcdInfo16x2(object):
 
         import netifaces as ni
         ip = ni.ifaddresses('eth0')[2][0]['addr']
-        self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineB=str(ip), lineA="AROM     Network")))
+        self.setLCD(lineB=str(ip), lineA="AROM     Network")
 
 
         while not rospy.is_shutdown() and self.runningApp == 'getNetwork':
@@ -169,7 +179,7 @@ class lcdInfo16x2(object):
 
             except Exception, e:
                 rospy.logerr(e)
-                self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineB=str(e), lineA="AROM     Error")))
+                self.setLCD(lineB=str(e), lineA="AROM     Error")
 
 
 
@@ -177,7 +187,7 @@ class lcdInfo16x2(object):
         self.runningApp = 'getTime'
         i = 0
 
-        self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineB=str(ip)), lineA="AROM     Network"))
+        self.setLCD(lineB=str(ip), lineA="AROM     Network")
 
         while not rospy.is_shutdown() and self.runningApp == 'getNetwork':
             try:
@@ -192,7 +202,7 @@ class lcdInfo16x2(object):
 
             except Exception, e:
                 rospy.logerr(e)
-                self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineB=str(e), lineA="AROM     Error")))
+                self.setLCD(lineB=str(e), lineA="AROM     Error")
 
     def ShowDateTime(self):
         self.runningApp = 'ShowDateTime'
@@ -200,10 +210,10 @@ class lcdInfo16x2(object):
         while not rospy.is_shutdown() and self.runningApp == 'ShowDateTime':
             try:
                 time.sleep(0.5)
-                self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineB=time.strftime("%Y-%m-%d", time.gmtime()), lineA=str(time.strftime("%H:%M:%S UT", time.gmtime())) )))
+                self.setLCD(lineB=time.strftime("%Y-%m-%d", time.gmtime()), lineA=str(time.strftime("%H:%M:%S UT", time.gmtime())))
             except Exception, e:
                 rospy.logerr(e)
-                self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineB=str(e), lineA="AROM     Error")))
+                self.setLCD(lineB=str(e), lineA="AROM     Error")
 
             if len(btn_data) > 0:
                 lastBtn = btn_data[0]
@@ -217,7 +227,7 @@ class lcdInfo16x2(object):
     def getWeather(self):
         index = 0
         param  = list(aws_data)[index]
-        self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineB="%.4f" %(aws_data[param]), lineA=param)))
+        self.setLCD(lineB="%.4f" %(aws_data[param]), lineA=param)
         self.runningApp = 'getWeather'
         i = 0
 
@@ -234,7 +244,7 @@ class lcdInfo16x2(object):
                             index = len(aws_data)
                         index += 1
                         param  = list(aws_data)[index]
-                        self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineB="%.4f" %(aws_data[param]), lineA=param)))
+                        self.setLCD(lineB="%.4f" %(aws_data[param]), lineA=param)
 
 
                     elif lastBtn == 'KEY_VOLUMEDOWN':
@@ -242,25 +252,25 @@ class lcdInfo16x2(object):
                             index = 0
                         index -= 1
                         param  = list(aws_data)[index]
-                        self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineB="%.4f" %(aws_data[param]), lineA=param)))
-
+                        self.setLCD(lineB="%.4f" %(aws_data[param]), lineA=param)
+    
 
                     elif lastBtn == 'KEY_F3': # OK
                         param  = list(aws_data)[index]
                         print param
-                        self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineB="%.4f" %(aws_data[param]), lineA=param)))
+                        self.setLCD(lineB="%.4f" %(aws_data[param]), lineA=param)
 
                     elif lastBtn == 'KEY_F2':  # Back
                         self.runningApp = None
                         self.display()
                 if i > 100:
                     i = 0
-                    self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineB="%.4f" %(aws_data[param]), lineA=param)))
+                    self.setLCD(lineB="%.4f" %(aws_data[param]), lineA=param)
                 i += 1
 
             except Exception, e:
                 rospy.logerr(e)
-                self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineB=str(e), lineA="AROM     Error")))
+                self.setLCD(lineB=str(e), lineA="AROM     Error")
 
 
 if __name__ == '__main__':

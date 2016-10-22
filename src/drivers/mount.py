@@ -1,4 +1,14 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+
+print __name__
+print __package__
+print __file__
+import os
+import sys
+
+
 
 import math
 import time
@@ -14,7 +24,7 @@ from arom.srv import *
 from arom.msg import *
 import numpy as np
 
-
+from ..arom_tools import *
 
 from pydirectmount.drive import drive
 
@@ -24,7 +34,7 @@ from astropy.coordinates import SkyCoord  # High-level coordinates
 from astropy.coordinates import ICRS, Galactic, FK4, FK5, AltAz  # Low-level frames
 from astropy.coordinates import Angle, Latitude, Longitude  # Angles
 from astropy.coordinates import EarthLocation
-from astropy.coordinates import get_sun
+from astropy.coordinates import get_sun, get_body
 from astropy.coordinates import solar_system_ephemeris
 #from astroquery.simbad import Simbad
 
@@ -40,7 +50,7 @@ def callback_btn(recive):
     btn_data.append(recive.data)
     print recive, btn_data
 
-class mount(object):
+class mount(AromNode):
     def __init__(self, parent = None, arg = None, name = "mount", port="", connect = True, var = {}):
         self.arg = arg
         self.Autoconnect = connect
@@ -83,14 +93,21 @@ class mount(object):
                         #self.mount.Slew(SkyCoord(alt = float(split[1]), az = float(split[2]), obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
                     elif "solar" in lastBtn:
                         split = lastBtn.split(" ")
-                        self.mount.Slew(SkyCoord.get_body(split[1], obstime = Time.now(), location = self.mount.getObs()).icrs)
+                        self.mount.Slew(get_body(split[1], obstime = Time.now(), location = self.mount.getObs()).icrs)
+
+                    elif "sun" in lastBtn:
+                        self.mount.Slew(get_sun(Time.now()).icrs)
                     
                     elif "altaz" in lastBtn:
                         split = lastBtn.split(" ")
                         self.mount.Slew(SkyCoord(alt = float(split[1]), az = float(split[2]), obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
+                    
+                    elif "radec" in lastBtn:
+                        split = lastBtn.split(" ")
+                        self.mount.Slew(SkyCoord(alt = float(split[1]), az = float(split[2]), obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
                         
                     elif lastBtn == 'KEY_OK':
-                        self.mount.Slew(SkyCoord(alt = 1, az = 180+45+90, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
+                        self.mount.Slew(SkyCoord(ra = float(split[1]), dec = float(split[2]), frame = 'icrs', unit="deg"))
                         
                         #now = Time.now()                                  
                         #altazframe = AltAz(obstime=now, location=self.mount.getObs())                                               

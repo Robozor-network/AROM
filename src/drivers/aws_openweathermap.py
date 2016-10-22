@@ -6,8 +6,12 @@ import rospy
 from arom.srv import *
 from arom.msg import *
 import httplib2
-import urllib
 
+import Queue
+import base64
+import syslog
+import urllib
+import urllib2
 
 data = {}
 
@@ -15,38 +19,60 @@ def callback(recive):
     global data
     for i, type in enumerate(recive.type):
         data[type] = recive.value[i]
-    print data
+    #print data
 
 
-def listener():
-
-    rospy.init_node('listener', anonymous=True)
+def openWeatherMap():
+    name = 'aws_openweathermap'
+    rospy.init_node(name, anonymous=True)
     rospy.Subscriber("/aws_out", msg_WeatherStation, callback)
 
+    #ID = rospy.get_param('/arom/aws/%s/ID'%(name))
+    #PASSWORD = rospy.get_param('/arom/aws/%s/PASSWORD'%(name))
+    NAME = rospy.get_param('/arom/observatory/name')
+    LAT = rospy.get_param('/arom/observatory/lat')
+    LON = rospy.get_param('/arom/observatory/lon')
+    ALT = rospy.get_param('/arom/observatory/alt')
 
-    rate = rospy.Rate(0.1) # 10hz
+    rate = rospy.Rate(0.01) # 10hz
     while data == {} and not rospy.is_shutdown():
         time.sleep(0.25)
     while not rospy.is_shutdown():
-        print "bla", data
+        try:
+            
+            
+            
+            values = {}
+            #values['name'] = NAME
+            values['lat']  = str(LAT)
+            values['long'] = str(LON)
+            values['alt']  = str(ALT)
+            values['temp'] = str(14.345)
 
-        post_data = {'name':"ZVPP",
-                     'lat': 48.986976,
-                     'long': 14.467532,
-                     'alt': 350,
-                     'pressure': data['pres_out'],
-                     'humidity': data['humidity_sht'],
-                     'temp': data['temp_sht'],
-                     'dewpoint': data['dew_pt'],
-                     'wind_speed': data['windspeed_out'],
-                     'wind_dir': data['winddir_out'],
-                     'lum': data['light_out'],
-                     }
+            req = urllib2.Request("http://openweathermap.org/data/post/", urllib.urlencode(values))
+            req.get_method = lambda: 'POST'
+            #req.add_header("User-Agent", "arom/aws_openweathermap")
+            b64s = base64.encodestring('%s:%s' % ('roman-dvorak', 'hesloje1')).replace('\n', '')
+            req.add_header("Authorization", "Basic %s" % b64s)
+            #self.post_with_retries(req)
+            print req.get_full_url()
+            print req.get_type()
+            print req.get_selector()
+            print b64s
+            print req.get_header('Authorization')
+            response = urllib2.urlopen(req)
 
-        print httplib2.Http().request("http://openweathermap.org/data/post", 'POST', urllib.urlencode(post_data))
+            print response
 
+        except urllib2.HTTPError, e:
+          if e.getcode() == 500:
+            content = e.read()
+            print content
+          else:
+            rospy.logerr(e)
+          
         rate.sleep()
 
 
 if __name__ == '__main__':
-    listener()
+    openWeatherMap()
