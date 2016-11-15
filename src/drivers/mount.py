@@ -49,7 +49,6 @@ class mount(AromNode):
     node_type = "mount"
     node_pymlab = True
 
-
     def __init__(self, parent = None, arg = None, name = "mount", port="", connect = True, var = {}):
         self.arg = arg
         self.Autoconnect = connect
@@ -106,6 +105,11 @@ class mount(AromNode):
                         split = lastBtn.split(" ")
                         self.mount.Slew(SkyCoord(alt = float(split[1]), az = float(split[2]), obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
                         
+                    elif "tle" in lastBtn:
+                        split = lastBtn.split(" ")
+                        self.mount.StartTrackingTLE(name = split[1])
+                        #self.mount.Slew(SkyCoord(alt = float(split[1]), az = float(split[2]), obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
+                        
                     elif lastBtn == 'home' or lastBtn == 'KEY_STOP':
                         self.mount.GoPark()
 
@@ -134,7 +138,7 @@ class mount(AromNode):
                     elif lastBtn == 'KEY_TAB':
                         self.mount.Slew(SkyCoord(alt = 1, az = 181, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
 
-                    elif lastBtn == 'KEY_PLAY':
+                    elif lastBtn == 'KEY_PLAY' or lastBtn == "unpark":
                         self.mount.UnPark()
                 else:
                     #(ra, dec) = self.mount.getCoordinates('RaDec')
