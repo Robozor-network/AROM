@@ -92,7 +92,7 @@ class mount(AromNode):
 
                     elif "solar" in lastBtn:
                         split = lastBtn.split(" ")
-                        self.mount.Slew(get_body(split[1], obstime = Time.now(), location = self.mount.getObs()).icrs)
+                        self.mount.Slew(get_body(split[1], time = Time.now(), location = self.mount.getObs()).icrs)
 
                     elif "sun" in lastBtn:
                         print get_sun(Time.now()).icrs

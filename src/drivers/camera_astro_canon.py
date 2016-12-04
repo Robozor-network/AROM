@@ -38,26 +38,15 @@ class AstroCamCanon(AstroCam):
             try:
                 print "============"
                 child = gp.check_result(gp.gp_widget_get_child(camera_config, n))
-                #print child
-                #label = gp.check_result(gp.gp_widget_get_label(child))
-                #print label
                 name = gp.check_result(gp.gp_widget_get_name(child))
                 print name
                 chtype = gp.check_result(gp.gp_widget_get_type(child))
                 print chtype
-                #value = gp.check_result(gp.gp_widget_get_value(child))
-                #print value
-
                 ro = gp.check_result(gp.gp_widget_get_readonly(child))
                 print ro
-
                 cdildcen = gp.check_result(gp.gp_widget_count_children(child))
                 print cdildcen
                 
-                #print gp.check_result(gp.gp_widget_get_range(child))
-                #print gp.check_result(gp.gp_widget_get_value(child))
-
-
 
             except Exception, e:
                 print e
@@ -101,7 +90,7 @@ class AstroCamCanon(AstroCam):
 
             file_path = gp.check_result(gp.gp_camera_capture(self.camera, gp.GP_CAPTURE_IMAGE, self.context))
             print('Camera file path: {0}/{1}'.format(file_path.folder, file_path.name))
-            target = os.path.join('/home/odroid/AROM/', 'aromcapt_taget_'+time.strftime("%Y%m%d-%H%M%S", time.gmtime())+'.cr2')
+            target = os.path.join('/home/odroid/AROM/', 'arom_capt_taget_'+time.strftime("%Y%m%d-%H%M%S", time.gmtime())+'.cr2')
             print('Copying image to', target)
             camera_file = gp.check_result(gp.gp_camera_file_get(self.camera, file_path.folder, file_path.name, gp.GP_FILE_TYPE_NORMAL, self.context))
             gp.check_result(gp.gp_file_save(camera_file, target))

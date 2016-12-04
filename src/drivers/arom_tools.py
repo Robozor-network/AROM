@@ -20,3 +20,10 @@ class AromNode():
 
     def pymlab(self, *args, **kwds):
         self.pymlabService(**kwds)
+
+class Pymlab():
+    def __init__(self):
+        self.serv = rospy.ServiceProxy('pymlab_drive', PymlabDrive)
+
+    def send(self, device=None, method=None, parameters=None):
+        return self.serv(device=device, method=method, parameters=parameters)

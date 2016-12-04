@@ -19,7 +19,7 @@ class AstroCam(object):
         rospy.Subscriber("/camera/controll", String, callback_btn)
         rospy.Subscriber("/arom/UI/buttons", String, callback_btn)
 
-        rate = rospy.Rate(10)
+        #rate = rospy.Rate(10)
 
         while not rospy.is_shutdown():
             try:

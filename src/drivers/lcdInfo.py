@@ -64,11 +64,11 @@ class lcdInfo16x2(AromNode):
 
         self.pymlab(device="StatusLCD",   method="reset")
         self.pymlab(device="StatusLCD",   method="init")
-        self.pymlab(device="StatusLCD",   method="clear")
+        #self.pymlab(device="StatusLCD",   method="clear")
         self.pymlab(device="StatusLCD",   method="home")
 
         time.sleep(0.5)
-        self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineA="Welcome...", lineB="AROM     MLAB.cz")))
+        self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineA="Welcome...", lineB="AROM    MLAB.cz")))
 
         print "-------------"
         self.root = self.tree.getroot()
@@ -99,6 +99,7 @@ class lcdInfo16x2(AromNode):
 
             except Exception, e:
                 print e
+            time.sleep(0.1)
 
     def setLCD(self, lineA, lineB):
         self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineA=str(lineA), lineB=str(lineB))))
