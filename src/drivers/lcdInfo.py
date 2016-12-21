@@ -48,6 +48,8 @@ class lcdInfo16x2(AromNode):
 
 
         AromNode.__init__(self)
+        self.set_feature('display_show',{'rows': rows, 'cols': cols, 'publish': '/arom/node/lcdText'})
+        self.set_feature('display_control', {'up': 'KEY_VOLUMEUP', 'down': 'KEY_VOLUMEDOWN', 'back': 'KEY_F2', 'enter': 'KEY_F3', 'subscrib': '/arom/UI/buttons'})
 
         ##
         ##  Konec zakladni inicializace

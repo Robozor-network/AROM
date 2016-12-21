@@ -55,7 +55,8 @@ if __name__ == "__main__":
                     "address":        0x5d,
                 },{
                     "name":           "StatusLCD",
-                    "type":           "i2clcd"
+                    "type":           "i2clcd",
+                    "address":        0x27,
                 }#,{
                 #    "name":           "AWS_humi_in",
                 #    "type":           "sht25"
@@ -70,20 +71,27 @@ if __name__ == "__main__":
                 #    "name":           "io",
                 #    "type":           "i2cio",
                 #},
-                
+
     ])
     
     i2c2 = str({
             "device": "serial",
-            "port": '/dev/ttyUSB0',
+            "port": '/dev/ttyUSB2',
         })
     bus2 = str([
                 {
                     "name":           "telescope_lts",
-                    "type":           "lts01"
+                    "type":           "lts01",
+                    "address":        0x48
                 },{ 
                     "name":           "telescope_spi", 
-                    "type":           "i2cspi"
+                    "type":           "i2cspi",
+                    "address":        0x2E
+                },
+                { 
+                    "name":            "gpio_mount",
+                    "type":            "I2CIO_TCA9535",
+                    "address":         0x26
                 }#,{
                 #    "name":           "telescope_magnetometer",
                 #    "type":           "mag01",
@@ -101,7 +109,7 @@ if __name__ == "__main__":
     rospy.init_node('pymlab_client', anonymous=True)
 
     pymlab = rospy.ServiceProxy('pymlab_init', PymlabInit)
-    print pymlab(i2c=i2c, bus=bus)
-    print pymlab(i2c=i2c2, bus=bus2)
+    print "smbus  -", pymlab(i2c=i2c, bus=bus)
+    print "serial -", pymlab(i2c=i2c2, bus=bus2)
     
     msg_pymlab.publish(name = "", data="{'start': True}")

@@ -18,7 +18,8 @@ from arom.srv import *
 from arom.msg import *
 import numpy as np
 
-from arom_tools import *
+#from arom_tools import *
+from __init__ import AromNode
 
 from pydirectmount.drive import drive
 
@@ -74,11 +75,18 @@ class mount(AromNode):
 
         #rospy.init_node('AROM_mount')
         AromNode.__init__(self)
+        #self.set_feature('mount_position',{'publish': '/mount/status/coordinates/RaDec'})
+        #self.set_feature('mount_offset',{'subscrib': '/mount/controll'})
+        self.set_feature('mount_slew',{'subscrib': '/mount/controll', 'publish': '/mount/status/coordinates/RaDec'})
+        self.set_feature('mount_skymap',{})
+        #self.set_feature('mount_info',{'type': 'HEQ5', 'mount_mode': 'eq', 'obs_lat': 10.2332, 'obs_lon': 10.2332, 'obs_alt': 10.2332})
+
         print "zinicializovano"
 
         rate = rospy.Rate(self.rate)
         ra = 0
         dec = 90
+        rospy.Timer(rospy.Duration(2), self.send_position, oneshot=False)
         while not rospy.is_shutdown():
             try:
                 if len(btn_data) > 0:
@@ -133,10 +141,12 @@ class mount(AromNode):
                         self.mount.Slew(SkyCoord(ra = ra, dec=dec, unit="deg"))
 
                     elif lastBtn == 'KEY_MENU':
-                        self.mount.Slew(SkyCoord(alt = 1, az = 181+45, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
+                        pass
+                        #self.mount.Slew(SkyCoord(alt = 1, az = 181+45, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
 
                     elif lastBtn == 'KEY_TAB':
-                        self.mount.Slew(SkyCoord(alt = 1, az = 181, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
+                        pass
+                        #self.mount.Slew(SkyCoord(alt = 1, az = 181, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
 
                     elif lastBtn == 'KEY_PLAY' or lastBtn == "unpark":
                         self.mount.UnPark()
@@ -166,6 +176,14 @@ class mount(AromNode):
 
 
         self.connection.close()
+
+    def send_position(self, object):
+        print "send position :)"
+        coord = self.mount.getCoordinates()
+        #return (coord.ra.degree, coord.dec.degree)
+        mat = Float32MultiArray(data=[coord.ra.degree, coord.dec.degree])
+        self.pub_radec.publish(mat)
+            
 
 
 

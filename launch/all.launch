@@ -47,4 +47,9 @@
         pkg="arom"
         type="camera_astro_canon.py"
     />
+    <node
+        name="mount_gpio"
+        pkg="arom"
+        type="gpio.py"
+    />
 </launch>
