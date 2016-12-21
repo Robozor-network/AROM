@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os
-import sys
 
 import math
 import time
@@ -17,8 +15,6 @@ from std_msgs.msg import Float32MultiArray
 from arom.srv import *
 from arom.msg import *
 import numpy as np
-
-from arom_tools import *
 
 from pydirectmount.drive import drive
 
@@ -89,14 +85,14 @@ class mount(AromNode):
                     if "name" in lastBtn:
                         split = lastBtn.split(" ")
                         self.mount.Slew(SkyCoord.from_name(split[1]))
-
+                        #self.mount.Slew(SkyCoord(alt = float(split[1]), az = float(split[2]), obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
                     elif "solar" in lastBtn:
                         split = lastBtn.split(" ")
-                        self.mount.Slew(get_body(split[1], time = Time.now(), location = self.mount.getObs()).icrs)
+                        self.mount.Slew(get_body(split[1], obstime = Time.now(), location = self.mount.getObs()).icrs)
 
                     elif "sun" in lastBtn:
-                        print get_sun(Time.now()).icrs
-
+                        self.mount.Slew(get_sun(Time.now()).icrs)
+                    
                     elif "altaz" in lastBtn:
                         split = lastBtn.split(" ")
                         self.mount.Slew(SkyCoord(alt = float(split[1]), az = float(split[2]), obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
@@ -105,40 +101,49 @@ class mount(AromNode):
                         split = lastBtn.split(" ")
                         self.mount.Slew(SkyCoord(alt = float(split[1]), az = float(split[2]), obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
                         
-                    elif "tle" in lastBtn:
-                        split = lastBtn.split(" ")
-                        self.mount.StartTrackingTLE(name = split[1])
-                        #self.mount.Slew(SkyCoord(alt = float(split[1]), az = float(split[2]), obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
-                        
-                    elif lastBtn == 'home' or lastBtn == 'KEY_STOP':
-                        self.mount.GoPark()
-
                     elif lastBtn == 'KEY_OK':
                         self.mount.Slew(SkyCoord(ra = float(split[1]), dec = float(split[2]), frame = 'icrs', unit="deg"))
+                        
+                        #now = Time.now()                                  
+                        #altazframe = AltAz(obstime=now, location=self.mount.getObs())                                               
+                        #sunaltaz = get_sun(now).transform_to(altazframe)  
+                        #print sunaltaz, altazframe, now
+                        #self.mount.Slew(SkyCoord(get_sun(Time.now()), location = self.mount.getObs()).icrs)
 
-                    elif lastBtn == 'KEY_UP':
+                    if lastBtn == 'KEY_UP':
                         dec += 10
                         self.mount.Slew(SkyCoord(ra = ra, dec=dec, unit="deg"))
+                        #self.mount.Slew(SkyCoord(alt = 45, az = 181+90, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
+                        # mode: -90 - 0
 
-                    elif lastBtn == 'KEY_DOWN':
+                    if lastBtn == 'KEY_DOWN':
                         dec -= 10
                         self.mount.Slew(SkyCoord(ra = ra, dec=dec, unit="deg"))
+                        #self.mount.Slew(SkyCoord(alt = 45, az = 181+45, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
+                        # mode: -180 - -90
 
-                    elif lastBtn == 'KEY_LEFT':
+                    if lastBtn == 'KEY_LEFT':
                         ra += 10
                         self.mount.Slew(SkyCoord(ra = ra, dec=dec, unit="deg"))
+                        #self.mount.Slew(SkyCoord(alt = 45, az = 181, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
+                        #mode: -90 - 0
 
-                    elif lastBtn == 'KEY_RIGHT':
+                    if lastBtn == 'KEY_RIGHT':
                         ra -= 10
                         self.mount.Slew(SkyCoord(ra = ra, dec=dec, unit="deg"))
+                        #self.mount.Slew(SkyCoord(alt = 1, az = 181+90, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
+                        #mode: -180 - -90
 
-                    elif lastBtn == 'KEY_MENU':
+                    if lastBtn == 'KEY_MENU':
                         self.mount.Slew(SkyCoord(alt = 1, az = 181+45, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
 
-                    elif lastBtn == 'KEY_TAB':
+                    if lastBtn == 'KEY_TAB':
                         self.mount.Slew(SkyCoord(alt = 1, az = 181, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
 
-                    elif lastBtn == 'KEY_PLAY' or lastBtn == "unpark":
+                    elif lastBtn == 'KEY_STOP' or lastBtn == 'home':
+                        self.mount.GoPark()
+
+                    elif lastBtn == 'KEY_PLAY':
                         self.mount.UnPark()
                 else:
                     #(ra, dec) = self.mount.getCoordinates('RaDec')

@@ -1,0 +1,159 @@
+
+begin
+  remote = *
+  button = KEY_OK
+  prog = pylirc
+  config = KEY_OK
+end
+
+begin
+  remote = *
+  button = KEY_DOWN
+  prog = pylirc
+  config = KEY_DOWN
+end
+
+begin
+  remote = *
+  button = KEY_UP
+  prog = pylirc
+  config = KEY_UP
+end
+
+begin
+  remote = *
+  button = KEY_LEFT
+  prog = pylirc
+  config = KEY_LEFT
+end
+
+begin
+  remote = *
+  button = KEY_RIGHT
+  prog = pylirc
+  config = KEY_RIGHT
+end
+
+
+
+begin
+  remote = *
+  button = KEY_TAB
+  prog = pylirc
+  config = KEY_TAB
+end
+
+begin
+  remote = *
+  button = KEY_MENU
+  prog = pylirc
+  config = KEY_MENU
+end
+
+
+begin
+  remote = *
+  button = KEY_VOLUMEDOWN
+  prog = pylirc
+  config = KEY_VOLUMEDOWN
+end
+
+begin
+  remote = *
+  button = KEY_VOLUMEUP
+  prog = pylirc
+  config = KEY_VOLUMEUP
+end
+
+
+
+
+
+begin
+  remote = *
+  button = KEY_STOP
+  prog = pylirc
+  config = KEY_STOP
+end
+
+begin
+  remote = *
+  button = KEY_BACK
+  prog = pylirc
+  config = KEY_BACK
+end
+
+begin
+  remote = *
+  button = KEY_PAUSE
+  prog = pylirc
+  config = KEY_PAUSE
+end
+
+begin
+  remote = *
+  button = KEY_NEXT
+  prog = pylirc
+  config = KEY_NEXT
+end
+
+begin
+  remote = *
+  button = KEY_REWIND
+  prog = pylirc
+  config = KEY_REWIND
+end
+
+begin
+  remote = *
+  button = KEY_PLAY
+  prog = pylirc
+  config = KEY_PLAY
+end
+
+begin
+  remote = *
+  button = KEY_FASTFORWARD
+  prog = pylirc
+  config = KEY_FASTFORWARD
+end
+
+
+
+
+
+
+begin
+  remote = *
+  button = KEY_F
+  prog = pylirc
+  config = KEY_F
+end
+
+begin
+  remote = *
+  button = KEY_F1
+  prog = pylirc
+  config = KEY_F1
+end
+
+begin
+  remote = *
+  button = KEY_F2
+  prog = pylirc
+  config = KEY_F2
+end
+
+begin
+  remote = *
+  button = KEY_F3
+  prog = pylirc
+  config = KEY_F3
+end
+
+begin
+  remote = *
+  button = KEY_F4
+  prog = pylirc
+  config = KEY_F4
+end
