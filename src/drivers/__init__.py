@@ -25,4 +25,5 @@ class AromNode():
         self.pymlabService(**kwds)
 
     def set_feature(self, name, value):
-        rospy.set_param('/arom/node'+ str(rospy.get_name()) + '/feature/'+name, value)
+        rospy.set_param('/arom/node%s/feature/%s' %(str(rospy.get_name()),name), value)
+        rospy.loginfo("New feature '%s' for %s" %(rospy.get_name(), name))

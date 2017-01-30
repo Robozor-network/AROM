@@ -76,7 +76,7 @@ if __name__ == "__main__":
     
     i2c2 = str({
             "device": "serial",
-            "port": '/dev/ttyUSB2',
+            "port": '/dev/ttyUSB0',
         })
     bus2 = str([
                 {

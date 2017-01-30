@@ -61,7 +61,7 @@ class mount(AromNode):
         self.rate = 1
 
         self.mount = drive(profile = 'HEQ5', mode = "eq", connectMethod = 'pymlab',
-            obs_lat = 48.986976, obs_lon = 14.467532, obs_alt = 300, port = '/dev/ttyUSB0')
+            obs_lat = 48.986976, obs_lon = 14.467532, obs_alt = 382, port = '/dev/ttyUSB0')
         
         self.mount.run()
         self.mount.UnPark()
@@ -78,6 +78,7 @@ class mount(AromNode):
         #self.set_feature('mount_position',{'publish': '/mount/status/coordinates/RaDec'})
         #self.set_feature('mount_offset',{'subscrib': '/mount/controll'})
         self.set_feature('mount_slew',{'subscrib': '/mount/controll', 'publish': '/mount/status/coordinates/RaDec'})
+        self.set_feature('mount_tracking',{'subscrib': '/mount/controll', 'publish': '/mount/status/coordinates/RaDec'})
         self.set_feature('mount_skymap',{})
         #self.set_feature('mount_info',{'type': 'HEQ5', 'mount_mode': 'eq', 'obs_lat': 10.2332, 'obs_lon': 10.2332, 'obs_alt': 10.2332})
 
@@ -86,7 +87,7 @@ class mount(AromNode):
         rate = rospy.Rate(self.rate)
         ra = 0
         dec = 90
-        rospy.Timer(rospy.Duration(2), self.send_position, oneshot=False)
+        rospy.Timer(rospy.Duration(1), self.send_position, oneshot=False)
         while not rospy.is_shutdown():
             try:
                 if len(btn_data) > 0:
@@ -111,12 +112,26 @@ class mount(AromNode):
                     
                     elif "radec" in lastBtn:
                         split = lastBtn.split(" ")
-                        self.mount.Slew(SkyCoord(alt = float(split[1]), az = float(split[2]), obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
+                        self.mount.Slew(SkyCoord(ra = float(split[1]), dec = float(split[2]), obstime = Time.now(), unit="deg", location = self.mount.getObs()).icrs)
                         
                     elif "tle" in lastBtn:
                         split = lastBtn.split(" ")
                         self.mount.StartTrackingTLE(name = split[1])
                         #self.mount.Slew(SkyCoord(alt = float(split[1]), az = float(split[2]), obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
+                        
+                    elif "resetMount" in lastBtn:
+                        self.mount.Reset()
+
+                    elif "spd" in lastBtn:
+                        split = lastBtn.split(" ")
+                        self.mount.setTrackingSpeed(ra = float(split[1]), dec = float(split[2]))
+                        self.mount.tracking(True)
+                        
+                    elif "startTracking" in lastBtn:
+                        self.mount.tracking(True)
+                        
+                    elif "stopTracking" in lastBtn:
+                        self.mount.tracking(False)
                         
                     elif lastBtn == 'home' or lastBtn == 'KEY_STOP':
                         self.mount.GoPark()
@@ -178,11 +193,12 @@ class mount(AromNode):
         self.connection.close()
 
     def send_position(self, object):
-        print "send position :)"
-        coord = self.mount.getCoordinates()
-        #return (coord.ra.degree, coord.dec.degree)
-        mat = Float32MultiArray(data=[coord.ra.degree, coord.dec.degree])
-        self.pub_radec.publish(mat)
+        try:
+            coord = self.mount.getCoordinates()
+            mat = Float32MultiArray(data=[coord.ra.degree, coord.dec.degree])
+            self.pub_radec.publish(mat)
+        except Exception, e:
+            print e
             
 
 
