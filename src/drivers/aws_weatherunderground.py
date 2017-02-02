@@ -42,7 +42,6 @@ class weatherUploader(AromNode):
             time.sleep(0.25)
         while not rospy.is_shutdown():
             try:
-                print "Ahoj :)"
                 self.UpdateFeature()
                 req = ""
                 types = rospy.get_param('/arom/node/aws_weatherudnerground/feature/aws_uploader_api_params/data/')
@@ -55,13 +54,12 @@ class weatherUploader(AromNode):
 
                 for sensor in data:
                     try:
-                        print
                         req += "&%s=%f" %(self.aws_data[sensor], self.ConvertValue(float(data[sensor]), self.api_data[self.aws_data[sensor]]['unit']))
                         
                     except Exception, e:
                         rospy.loginfo("#2> " + repr(e))
                 
-                print req
+                #print req
 
                 print "https://rtupdate.wunderground.com/weatherstation/updateweatherstation.php?realtime=1&rtfreq=5"+req
 
