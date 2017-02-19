@@ -1,16 +1,12 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import rospy
-import pymlab
+import json
 from pymlab import config
-import sys
 import arom
-from std_msgs.msg import String
-from std_msgs.msg import Float32
 import std_msgs
 import time
-from arom.srv import *
-from arom.msg import *
 from drivers.__init__ import AromNode
 
 
@@ -33,45 +29,84 @@ class pymlab_server(AromNode):
         self.bus = []
 
 
-        rospy.Subscriber("pymlab_server", msg_pymlabInit, self.status)
+        rospy.Subscriber("pymlab_server", arom.msg.msg_pymlabInit, self.status)
         
-        s1 = rospy.Service('pymlab_init', PymlabInit, self.init)
-        s2 = rospy.Service('pymlab_server', PymlabServerStatus, self.status)
-        s3 = rospy.Service('pymlab_drive', PymlabDrive, self.drive)
+        s1 = rospy.Service('pymlab_init', arom.srv.PymlabInit, self.init)
+        s2 = rospy.Service('pymlab_server', arom.srv.PymlabServerStatus, self.status)
+        s3 = rospy.Service('pymlab_drive', arom.srv.PymlabDrive, self.drive)
 
         AromNode.__init__(self)
-        self.set_feature('pymlab_structure',{'i2c': "", 'bus': ""})
+        self.set_feature('pymlab_structure',{'cfg': "/home/odroid/robozor/station/pymlab_presets/ZVPP.json"})
 
 
     def init(self, cfg=None):
+        print cfg
         try:
-            self.status = False
-            self.init = cfg
+            if cfg.default == True:
+                
+                self.i2c = []     #TODO: moznost pridavat dalsi smernice za behu - tzn. pridavat jen cast... To by bylo v zavislosti na nejake promene v srv filu
+                self.bus = []
+                rospy.set_param('/arom/node/pymlab_node/devices', {})
 
-            self.cfg_i2c = eval(cfg.i2c)
-            self.i2c.append(self.cfg_i2c)
-            self.cfg_bus = eval(cfg.bus)
-            self.bus.append(self.cfg_bus)
+                with open(rospy.get_param('/arom/node/pymlab_node/feature/pymlab_structure/cfg')) as data_file:   #TODO: retezec k paramserveru podle nazvu nodu atd... 
+                    data = json.load(data_file)['children']
 
-            rospy.loginfo("konfiguracni data: \n\r %s" %str(cfg))
-            self.init_bus(i2c = self.cfg_i2c, bus = self.cfg_bus)
+                    for bus in data:
+                        try:
+                            self.cfg_i2c = bus
+                            #self.cfg_i2c.pop('children', None);     #TODO: zde by bylo dobre z JSONu odebrat 'children' index
 
-            return True
+                            self.cfg_bus = bus['children']
+
+                            print json.dumps(self.cfg_i2c, indent=4, sort_keys=False)
+                            print json.dumps(self.cfg_bus, indent=4, sort_keys=False)
+                            rospy.set_param('/arom/node/pymlab_node/devices/'+bus['name'], self.cfg_bus)
+                            
+                            self.status = False
+
+                            self.i2c.append(self.cfg_i2c)
+                            self.bus.append(self.cfg_bus)
+
+                            rospy.loginfo("konfiguracni data: \n\r %s" %str(cfg))
+                            self.init_bus(i2c = self.cfg_i2c, bus = self.cfg_bus)
+                        except Exception, e:
+                            rospy.logerr(e)
+
+                rospy.loginfo("Inicializace pymlabu problehla uspesne")
+                return True
+
+            else: #TODO: Tato cast by mela byt v budoucnu odstranena....
+                self.status = False
+
+                self.cfg_i2c = eval(cfg.i2c)
+                self.i2c.append(self.cfg_i2c)
+                self.cfg_bus = eval(cfg.bus)
+                self.bus.append(self.cfg_bus)
+
+                rospy.loginfo("konfiguracni data: \n\r %s" %str(cfg))
+                self.init_bus(i2c = self.cfg_i2c, bus = self.cfg_bus)
+
+                return True
         except Exception, e:
             rospy.logerr("#03:"+repr(e))
             return False
 
     def init_bus(self, i2c, bus):
+        #
+        #  Tato funkce provede zkonfigurovani pymlabu (config.Config())
+        #    na jedno sbernici a pak si vytvori objekt kazdeho senzoru
+        #    zapojeneho do odpovidajici sbernice
+        #
+
         self.pymlab_config = config.Config(i2c = i2c, bus = bus)
         self.pymlab_config.initialize()
         for x in bus:
             try:
                 self.devices[x['name']] = self.pymlab_config.get_device(x['name'])
+                print x, self.devices[x['name']]
             except Exception, e:
                 rospy.logerr("#02:"+repr(e))
-            print x, 
-            self.devices[x['name']] = self.pymlab_config.get_device(x['name'])
-            print self.devices[x['name']]
+
 
     def getvalue(self, cfg=None):
         val = int(float(self.lts_sen.get_temp()))
@@ -90,17 +125,7 @@ class pymlab_server(AromNode):
             rospy.loginfo("Starting PyMLAB ROS server with: %s" %(repr(self.devices)))
             self.status = True
             rate = rospy.Rate(0.1)
-            #AutoInputs = self.AutoInputs
             devices = self.devices
-            #sender = rospy.Publisher('pymlab_data', SensorValues, queue_size=20)
-            #values = {}
-            #for x in AutoInputs:
-            #    for y in AutoInputs[x]:
-            #        #print "AutoInputs >>", x, y, 
-            #        #print str(x)+"/"+str(y), str(x)+"/"+str(y)
-            #        values[str(x)+"/"+str(y)] = str(x)+"/"+str(y)
-            #rospy.set_param("values", values)
-           # print "\n run \n\n"
             while True:
                 if self.err_count > 100:
                     rospy.logwarn("restarting pymlab")

@@ -1,0 +1,5 @@
+Header header
+#arom/CameraParam parameter
+---
+bool success
+string status_message

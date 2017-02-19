@@ -1,5 +1,7 @@
 string i2c
 string bus
 string devices
+string config
+byte default
 ---
 bool status

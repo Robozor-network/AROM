@@ -12,7 +12,6 @@ from std_msgs.msg import Float32
 from arom.srv import *
 from arom.msg import *
 import numpy as np
-import pylirc
 from __init__ import AromNode
 
 try:
@@ -277,5 +276,5 @@ class lcdInfo16x2(AromNode):
 
 
 if __name__ == '__main__':
-    m = lcdInfo16x2(file='/home/odroid/rosws/src/AROM/cfg/lcdAROM.xml')
+    m = lcdInfo16x2(file='/home/odroid/ros_ws/src/AROM/cfg/lcdAROM.xml')
     #m.loadCFG('/home/odroid/rosws/src/AROM/cfg/lcdAROM.xml')

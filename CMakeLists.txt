@@ -19,6 +19,10 @@ add_message_files(
    DriverControlm.msg
    msg_pymlabInit.msg # pro inicializaci PYMLAB serveru
    msg_WeatherStation.msg
+   msg_aws.msg
+
+   CameraParam.msg
+
 #   Message1.msg
 #   Message2.msg
 )
@@ -34,6 +38,10 @@ add_service_files(
    PymlabInit.srv            # Pro inicializaci PYMLABU
    PymlabServerStatus.srv    # Pro
    PymlabDrive.srv           # Pro
+
+   setCameraParam.srv
+
+
 #   Service1.srv
 #   Service2.srv
 )

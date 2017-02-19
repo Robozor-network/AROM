@@ -29,7 +29,7 @@ from astropy.coordinates import SkyCoord  # High-level coordinates
 from astropy.coordinates import ICRS, Galactic, FK4, FK5, AltAz  # Low-level frames
 from astropy.coordinates import Angle, Latitude, Longitude  # Angles
 from astropy.coordinates import EarthLocation
-from astropy.coordinates import get_sun, get_body
+from astropy.coordinates import get_sun #, get_body
 from astropy.coordinates import solar_system_ephemeris
 #from astroquery.simbad import Simbad
 
@@ -99,9 +99,9 @@ class mount(AromNode):
                         split = lastBtn.split(" ")
                         self.mount.Slew(SkyCoord.from_name(split[1]))
 
-                    elif "solar" in lastBtn:
-                        split = lastBtn.split(" ")
-                        self.mount.Slew(get_body(split[1], time = Time.now(), location = self.mount.getObs()).icrs)
+                    #elif "solar" in lastBtn:
+                    #    split = lastBtn.split(" ")
+                    #    self.mount.Slew(get_body(split[1], time = Time.now(), location = self.mount.getObs()).icrs)
 
                     elif "sun" in lastBtn:
                         print get_sun(Time.now()).icrs
