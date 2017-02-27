@@ -43,7 +43,7 @@ class lcdInfo16x2(AromNode):
 
         rospy.Subscriber("/aws_out", msg_WeatherStation, callback_aws)
         rospy.Subscriber("/arom/UI/buttons", String, callback_btn)
-        self.lcdText_pub = rospy.Publisher('/arom/node/lcdText', std_msgs.msg.String, queue_size=10)
+        self.lcdText_pub = rospy.Publisher('/arom/node/lcdText', std_msgs.msg.String, queue_size=5)
 
 
         AromNode.__init__(self)

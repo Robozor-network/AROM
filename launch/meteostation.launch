@@ -1,0 +1,35 @@
+<launch>
+    <rosparam
+        command="load"
+        file="/home/odroid/robozor-zvpp.yaml"
+    />
+    
+    <include
+        file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"
+        />
+
+    <node
+        name="aromWebUI"
+        pkg="arom"
+        type="runWeb.sh"
+        respawn="true"
+    />
+
+    <node
+        name="aromWeeWX"
+        pkg="arom"
+        type="runWeewx.sh"
+    />
+
+    <node
+        name="pymlab"
+        pkg="arom"
+        type="pymlab_bridge"
+    />
+    
+    <node
+        name="awsAdvance"
+        pkg="arom"
+        type="awsAdvance"
+    />
+</launch>

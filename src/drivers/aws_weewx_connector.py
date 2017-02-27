@@ -10,21 +10,16 @@ import weedb
 import weewx.drivers
 import weeutil.weeutil
 
+import json
+
 import rospy
-from arom.srv import *
-from arom.msg import *
+import std_msgs
+#from arom.srv import *
+#from arom.msg import *
 
 DRIVER_NAME = 'AWS_AROM'
 DRIVER_VERSION = "0.1"
 
-
-data = {}
-
-def callback(recive):
-    global data
-    for i, type in enumerate(recive.type):
-        data[type] = recive.value[i]
-    print "-",
 
 def loader(config_dict, engine):
     # This loader uses a bit of a hack to have the simulator resume at a later
@@ -38,42 +33,41 @@ class AWS_AROM(weewx.drivers.AbstractDevice):
     def __init__(self, **stn_dict):
         self.stn_dict = stn_dict
         print stn_dict[DRIVER_NAME]
-        name = 'aws_weewx_connector'
-        rospy.init_node(name, anonymous=True)
-        rospy.Subscriber("/aws_out", msg_WeatherStation, callback)
+        self.data = {}
+        name = 'weewx_bridge'
+        rospy.init_node(name, anonymous=False)
+        rospy.set_param('/arom/node%s/feature/%s' %(str(rospy.get_name()),'weewx'), '/weewx/')
+        print '/arom/node%s/feature/%s' %(str(rospy.get_name()),'weewx')
+        rospy.Subscriber("/arom/node/aws", std_msgs.msg.String, self.callback)
 
-    def getWeewxName(self, arom_name):
-        table = {'temperatureAWS0': ("outTemp", 1),
-                 'temperatureTEL0': ("inTemp", 1),
-                 'humidityAWS0': ("outHumidity", 1),
-                 'pressureAWS': ("pressure", 1),
-                 'windspdAWS': ("windSpeed", 1),
-                 'winddirAWS': ("windDir", 1),
-                 'lightAWS': ("radiation", 0.0079),}
-        return table.get(arom_name, None)
-
+    def callback(self, data):
+        #print data.data
+        self.data = json.loads(data.data)
 
     def genLoopPackets(self):
-        while data == {}:
-            print "aaaaaaaaaaa"
-            pass
+        while self.data == {}:
+            time.sleep(0.25)
         while True: 
-            print data
-            print "------------"
+            #print self.data
             try:
                 _packet = {"dateTime": time.time(),
                            "usUnits" : weewx.METRICWX}
-                print _packet
+                #print _packet
 
-                for name in data:
-                    weewx_id = self.getWeewxName(name)
-                    if weewx_id:
-                        print "---", name, weewx_id[0],data[name]*weewx_id[1]
-                        _packet[weewx_id[0]] = data[name]*weewx_id[1]
-                    else:
-                        print "---", name, weewx_id
+                Sensor_mapping = self.stn_dict[DRIVER_NAME]['Sensor_mapping']
+                for sensor in self.data['sensors']:
+                    try:
+                        #print sensor
+                        sensor_name = sensor['name']
 
-                print _packet
+
+                        if sensor_name in Sensor_mapping:
+                            _packet[Sensor_mapping[sensor_name][0]] = sensor['value']*float(Sensor_mapping[sensor_name][1])
+                    except Exception, e:
+                        print e
+
+
+                #print ">>>", _packet
                 yield _packet
             except Exception, e:
                 print e
@@ -96,16 +90,16 @@ class AWSConfEditor(weewx.drivers.AbstractConfEditor):
     # This section is for the AWS_AROM weather station
 
     # The driver to use:
-    driver = weewx.drivers.arom_aws
+    driver = weewx.drivers.aws_arom
 
     # Sensor mapping to the weewx data
     [[Sensor_mapping]]
-        #outTemp = barometer, 1
-
+        outTemp = barometer, 1
+        # arom_sensor_name = WeeWX_data_name, multiplier
 """
 
 
 if __name__ == "__main__":
     station = AWS_AROM()
     for packet in station.genLoopPackets():
-        print weeutil.weeutil.timestamp_to_string(packet['dateTime']), packet
+        pass

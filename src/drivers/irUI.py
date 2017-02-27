@@ -24,7 +24,7 @@ class irUI(object):
         blocking = 0;
 
         rate = rospy.Rate(10)
-        pylirc.init("pylirc", "/home/odroid/rosws/src/AROM/cfg/irConf", blocking)
+        pylirc.init("pylirc", "/home/odroid/robozor/station/irConf.conf", blocking)
         while not rospy.is_shutdown():
             try:
                 s = pylirc.nextcode(1)

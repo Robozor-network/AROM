@@ -9,10 +9,13 @@ from arom.msg import *
 class AromNode():
     def __init__(self):
 
-        if self.node_pymlab:
-            self.pymlabService = rospy.ServiceProxy('pymlab_drive', PymlabDrive)
-            rospy.set_param('/arom/node'+rospy.get_name()+"/pymlab", True)
-        else:
+        try:
+            if self.node_pymlab:
+                self.pymlabService = rospy.ServiceProxy('pymlab_drive', PymlabDrive)
+                rospy.set_param('/arom/node'+rospy.get_name()+"/pymlab", True)
+            else:
+                rospy.set_param('/arom/node'+rospy.get_name()+"/pymlab", False)
+        except Exception, e:
             rospy.set_param('/arom/node'+rospy.get_name()+"/pymlab", False)
 
         print "Starting init"

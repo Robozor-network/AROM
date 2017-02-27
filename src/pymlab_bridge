@@ -37,18 +37,21 @@ class pymlab_server(AromNode):
 
         AromNode.__init__(self)
         self.set_feature('pymlab_structure',{'cfg': "/home/odroid/robozor/station/pymlab_presets/ZVPP.json"})
+        self.init()
 
 
     def init(self, cfg=None):
         print cfg
         try:
-            if cfg.default == True:
+            if cfg == None or cfg.default == True:
+                print "Inicializace pymlabu (nova verze)"
                 
                 self.i2c = []     #TODO: moznost pridavat dalsi smernice za behu - tzn. pridavat jen cast... To by bylo v zavislosti na nejake promene v srv filu
                 self.bus = []
-                rospy.set_param('/arom/node/pymlab_node/devices', {})
+                rospy.set_param('/arom/node%s/devices'%(rospy.get_name()), {})
+                print "Pouzivana konfigurace:", rospy.get_param('/arom/node%s/feature/pymlab_structure/cfg'%(rospy.get_name()))
 
-                with open(rospy.get_param('/arom/node/pymlab_node/feature/pymlab_structure/cfg')) as data_file:   #TODO: retezec k paramserveru podle nazvu nodu atd... 
+                with open(rospy.get_param('/arom/node%s/feature/pymlab_structure/cfg'%(rospy.get_name()))) as data_file:   #TODO: retezec k paramserveru podle nazvu nodu atd... 
                     data = json.load(data_file)['children']
 
                     for bus in data:
@@ -60,7 +63,7 @@ class pymlab_server(AromNode):
 
                             print json.dumps(self.cfg_i2c, indent=4, sort_keys=False)
                             print json.dumps(self.cfg_bus, indent=4, sort_keys=False)
-                            rospy.set_param('/arom/node/pymlab_node/devices/'+bus['name'], self.cfg_bus)
+                            rospy.set_param('/arom/node%s/devices/'%(rospy.get_name())+bus['name'], self.cfg_bus)
                             
                             self.status = False
 

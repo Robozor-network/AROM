@@ -28,7 +28,7 @@ class awsAdvance(AromNode):
         self.set_feature('aws_setting', {'cfg': "/home/odroid/robozor/station/aws_presets/ZVPP.json"})
         self.pymlab = rospy.ServiceProxy('pymlab_drive', PymlabDrive)
 
-        with open(rospy.get_param('/arom/node/awsAdvance/feature/aws_setting/cfg')) as data_file:   #TODO: retezec k paramserveru podle nazvu nodu atd... 
+        with open(rospy.get_param('/arom/node%s/feature/aws_setting/cfg'%(rospy.get_name()))) as data_file:   #TODO: retezec k paramserveru podle nazvu nodu atd... 
             self.cfg_json = json.load(data_file)
         
         print json.dumps(self.cfg_json, indent=4, sort_keys=False)
