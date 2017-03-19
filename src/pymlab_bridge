@@ -45,7 +45,7 @@ class pymlab_server(AromNode):
         try:
             if cfg == None or cfg.default == True:
                 print "Inicializace pymlabu (nova verze)"
-                
+
                 self.i2c = []     #TODO: moznost pridavat dalsi smernice za behu - tzn. pridavat jen cast... To by bylo v zavislosti na nejake promene v srv filu
                 self.bus = []
                 rospy.set_param('/arom/node%s/devices'%(rospy.get_name()), {})
@@ -64,7 +64,7 @@ class pymlab_server(AromNode):
                             print json.dumps(self.cfg_i2c, indent=4, sort_keys=False)
                             print json.dumps(self.cfg_bus, indent=4, sort_keys=False)
                             rospy.set_param('/arom/node%s/devices/'%(rospy.get_name())+bus['name'], self.cfg_bus)
-                            
+
                             self.status = False
 
                             self.i2c.append(self.cfg_i2c)
@@ -105,8 +105,13 @@ class pymlab_server(AromNode):
         self.pymlab_config.initialize()
         for x in bus:
             try:
-                self.devices[x['name']] = self.pymlab_config.get_device(x['name'])
-                print x, self.devices[x['name']]
+                if x['type'] == "i2chub":
+                    for y in x['children']:
+                        self.devices[y['name']] = self.pymlab_config.get_device(y['name'])
+                        print x, self.devices[y['name']]
+                else:
+                    self.devices[x['name']] = self.pymlab_config.get_device(x['name'])
+                    print x, self.devices[x['name']]
             except Exception, e:
                 rospy.logerr("#02:"+repr(e))
 
@@ -139,7 +144,7 @@ class pymlab_server(AromNode):
                             self.init_bus(i2c = self.i2c[i], bus = bus)
                         except Exception, e:
                             rospy.logerr(e)
-                        
+
                 rate.sleep()
             return True
 
@@ -150,6 +155,13 @@ class pymlab_server(AromNode):
         print "parameters '%s', method '%s', device '%s'" %(cfg.parameters, cfg.method, cfg.device)
         while self.pymlab_read: time.sleep(0.01)
         self.pymlab_read = True
+        try:
+            self.devices[cfg.device].route()
+            #print self.devices
+            #print getattr(self.devices[cfg.device], "route")()
+        except Exception, e:
+            rospy.logerr("#hub:"+repr(e))
+
         try:
             if parameters == "" or parameters == None:
                 reval = getattr(self.devices[cfg.device], cfg.method)()
@@ -163,6 +175,7 @@ class pymlab_server(AromNode):
                 reval = getattr(self.devices[cfg.device], cfg.method)(eval(parameters))
                 print "#None"
             self.pymlab_read = False
+            print repr(reval)
             return str(reval)
         except Exception, e:
             self.err_count += 1
