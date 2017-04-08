@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import math
 import time
@@ -14,17 +15,20 @@ from arom.srv import *
 from arom.msg import *
 #import numpy as np
 
-from baseClass.camera_astro import AstroCam
+import camera_astro
+import rawpy
+import imageio
 
 import os
 import gphoto2 as gp
+import piggyphoto
 
+class AstroCamCanon(camera_astro.AstroCam):
+    node_name = "CanonCamera"
+    node_type = "AstroCam"
 
-class AstroCamCanon(AstroCam):
     def __init__(self):
         print "init AstroCamCanon"
-        rospy.init_node('camera_astro_canon')
-        #super(AstroCam, self).__init__()
 
         gp.check_result(gp.use_python_logging())
         self.context = gp.gp_context_new()
@@ -51,7 +55,7 @@ class AstroCamCanon(AstroCam):
             except Exception, e:
                 print e
 
-        AstroCam.__init__(self)
+        camera_astro.AstroCam.__init__(self)
 
     def setFocuser(self, name = None, type = None):
         raise NotImplementedError
@@ -61,6 +65,9 @@ class AstroCamCanon(AstroCam):
 
     def getCameraInfo(self):
         raise NotImplementedError
+
+    def getCaptureName(self, extension = 'jpg'):
+        return str("capture"+extension)
 
     def getCameralist(self):
         gp.check_result(gp.use_python_logging())
@@ -80,8 +87,24 @@ class AstroCamCanon(AstroCam):
             n += 1
         return 0
 
-    def capture(self, n=1, camera = None, exposition = None, iso = None, focus = None, Zoom = None):
+    def publishCR2(self, file):
+        print "publishCR2", file
+        raw = rawpy.imread(file)
+        #rgb = raw.postprocess(gamma=(1,1), no_auto_bright=True, output_bps=16)
+        rgb = raw.postprocess()
+        imageio.imsave(file+'.tiff', rgb)
+        print "save"
+        bayer = raw.raw_image
+        print "bayer"
+        self.pub_image.publish(self.bridge.cv2_to_imgmsg(cv2.fromarray(bayer), "bgr8"))
+
+
+    def capture(self, n=1, camera = None, exposition = None, iso = None, focus = None, Zoom = None, save = True, publish = False, name = None):
+        T_start = time.time()
         try:
+            if not name:
+                name = self.getCaptureName(extension = '')
+            filename = '/home/odroid/robozor/', name + '_'+time.strftime("%Y%m%d-%H%M%S", time.gmtime())+'.cr2'
             gp.check_result(gp.use_python_logging())
             self.context = gp.gp_context_new()
             self.camera = gp.check_result(gp.gp_camera_new())
@@ -90,16 +113,43 @@ class AstroCamCanon(AstroCam):
 
             file_path = gp.check_result(gp.gp_camera_capture(self.camera, gp.GP_CAPTURE_IMAGE, self.context))
             print('Camera file path: {0}/{1}'.format(file_path.folder, file_path.name))
-            target = os.path.join('/home/odroid/AROM/', 'arom_capt_taget_'+time.strftime("%Y%m%d-%H%M%S", time.gmtime())+'.cr2')
+            target = os.path.join(filename)
+            self.publishCR2(file = filename)
             print('Copying image to', target)
             camera_file = gp.check_result(gp.gp_camera_file_get(self.camera, file_path.folder, file_path.name, gp.GP_FILE_TYPE_NORMAL, self.context))
             gp.check_result(gp.gp_file_save(camera_file, target))
-            #subprocess.call(['xdg-open', target])
             gp.check_result(gp.gp_camera_exit(self.camera, self.context))
             return True 
         except Exception, e:
             rospy.logerr(e)
             return False
+        T_duration = time.time() - T_start
+        print "Doba prikazu: %s s" %(T_duration)
+
+    def exit(self):
+        print "ukoncuji program a odpojuji se od kamery"
+
+    def setStream(self, value):
+        self.stream = bool(value)
+
+    def streamLoop(self):
+        path = piggyphoto.CameraFilePath()
+        cfile = piggyphoto.cameraFile()
+
+        ans = 0
+        for i in range(1 + 1000):
+            ans = gp.gp_camera_capture_preview(self.camera, self.context)
+            if ans == 0: break
+            else: print "capture_preview(%s) retry #%d..." % (destpath, i)
+        #check(ans)
+        print ">>>>", ans
+
+        #if destpath:
+        #    cfile.save(destpath)
+        #else:
+        #    return cfile
+
+        print "loop"
 
     
 if __name__ == '__main__':

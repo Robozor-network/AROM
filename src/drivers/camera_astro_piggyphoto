@@ -1,0 +1,125 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+
+#new wrapper with piggyphoto
+#
+
+import math
+import time
+import datetime
+import rospy
+import std_msgs
+import sensor_msgs
+import actionlib
+import json
+import arom
+import camera_astro
+import cv2
+from cv_bridge import CvBridge, CvBridgeError
+
+import os
+import piggyphoto
+
+
+class AstroCamCanon(camera_astro.AstroCam):
+    node_name = "CanonCamera"
+    node_type = "AstroCam"
+
+    def __init__(self):
+        print "init AstroCamCanon"
+        #rospy.init_node('camera_astro_canon')
+
+        self.connect()
+        camera_astro.AstroCam.__init__(self)
+
+    def connect(self):
+        print "connect"
+        self.camera = piggyphoto.Camera()
+        print "End connect"
+
+    def setFocuser(self, name = None, type = None):
+        raise NotImplementedError
+
+    def setCamera(self, id = None):
+        raise NotImplementedError
+
+    def getCameraInfo(self):
+        raise NotImplementedError
+
+    def getCameralist(self):
+        raise NotImplementedError
+
+    def getSetting(self, name = None):
+        conf_dict = {}
+        self.camera.list_config()
+        for config in self.camera.list_config():
+            try:
+
+                cfg = {}
+                exec 'cfg["value"] = self.camera.config.'+config+'.value'
+                exec 'cfg["choices"] = self.camera.config.'+config+'.choices'
+                cfg["type"] = 'select'
+                conf_dict[str(config)] = cfg
+
+            except Exception as e:
+                print e
+            
+        rospy.set_param('/arom/node%s/feature/%s/config' %(str(rospy.get_name()),'cam_controll'), conf_dict)
+        print "***********************"
+
+    def setConfig(self, data = None):
+        print data
+        print self.camera.abilities
+        print "================================"
+        print data.param.rsplit('.', 1)[-1], data.value
+
+        cc = self.camera.config
+        param = cc.get_child_by_name(data.param.rsplit('.', 1)[-1])
+        print param
+        print param.value
+        param.value = str(data.value)
+        self.camera.config = cc
+        print "----------overeni"
+        cc = self.camera.config
+        param = cc.get_child_by_name(data.param.rsplit('.', 1)[-1])
+        print param
+        print param.value
+
+
+
+        #self.camera.set_config(data.param, data.value)
+        
+
+    def capture(self, n=1, camera = None, exposition = None, iso = None, focus = None, Zoom = None, save = True, publish = False, name = None, preview = False):
+        try:
+            self.camera.capture_image('/home/odroid/robozor/snap'+datetime.datetime.now().strftime('%Y%m%d-%H%M%S'))
+            print "done"
+
+            
+        except Exception, e:
+            rospy.logerr(e)
+            return False
+
+
+    def setStream(self, value):
+        self.stream = bool(value)
+
+
+
+    def streamLoop(self):
+        print "loop"
+        self.camera.capture_preview('/home/odroid/robozor/preview.jpg').clean()
+        frame = cv2.imread('/home/odroid/robozor/preview.jpg')
+        self.pub_image.publish(self.bridge.cv2_to_imgmsg(frame, "bgr8"))
+        del frame
+        time.sleep(0.2)
+        print "loop"
+
+    def exit(self):
+        #del self.camera
+        print "ukoncuji program a odpojuji se od kamery"
+
+    
+if __name__ == '__main__':
+    AstroCamCanon()

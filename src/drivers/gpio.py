@@ -91,8 +91,9 @@ class gpio_mount(AromNode):
 
 
     def send_status(self, object):
-        print "send status :)"
-        self.pub_status.publish(str(bin(self.port0)[2:].zfill(8))+str(bin(self.port1)[2:].zfill(8)))
+        print "posilam status"
+        port0, port1 = eval(self.pymlab(device="gpio_mount", method="get_ports").value)
+        self.pub_status.publish(str(bin(port0)[2:].zfill(8))+str(bin(port1)[2:].zfill(8)))
             
 
 if __name__ == '__main__':

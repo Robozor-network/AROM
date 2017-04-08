@@ -25,6 +25,7 @@ class pymlab_server(AromNode):
         self.err_count = 0
         self.pymlab_read = False # slouzi k ochrane pymlabu pred pokusem o dve cteni zaroven ...
         self.devices = {}
+        self.hub_devices = [] # seznam modulu, ktere vyuzivaji HUB
         self.i2c = []
         self.bus = []
 
@@ -107,12 +108,16 @@ class pymlab_server(AromNode):
             try:
                 if x['type'] == "i2chub":
                     for y in x['children']:
+                        print "NewDevice: [HUB] ", y['name'],
                         self.devices[y['name']] = self.pymlab_config.get_device(y['name'])
-                        print x, self.devices[y['name']]
+                        self.hub_devices.append(y['name'])
+                        print "      [OK]"
                 else:
+                    print "NewDevice: ", x['name'],
                     self.devices[x['name']] = self.pymlab_config.get_device(x['name'])
-                    print x, self.devices[x['name']]
+                    print "      [OK]"
             except Exception, e:
+                print "      [FAIL]"
                 rospy.logerr("#02:"+repr(e))
 
 
@@ -156,7 +161,9 @@ class pymlab_server(AromNode):
         while self.pymlab_read: time.sleep(0.01)
         self.pymlab_read = True
         try:
-            self.devices[cfg.device].route()
+            if cfg.device in self.hub_devices:
+                print "[HUB]",
+                self.devices[cfg.device].route()
             #print self.devices
             #print getattr(self.devices[cfg.device], "route")()
         except Exception, e:

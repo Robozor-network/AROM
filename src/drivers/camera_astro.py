@@ -1,10 +1,15 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
+import time
 import rospy
 #from std_msgs.msg import String
+import arom
 import std_msgs
 import sensor_msgs
+#from sensor_msgs.msg import Image
 from __init__ import AromNode
+from cv_bridge import CvBridge, CvBridgeError
 
 ActionData = []
 
@@ -18,16 +23,19 @@ def callback_btn(recive):
 class AstroCam(AromNode):
     def __init__(self):
 
+        print "AstroCam Init"
         rospy.Subscriber("/arom/camera/controll", std_msgs.msg.String, callback_btn)
         rospy.Subscriber("/arom/UI/buttons", std_msgs.msg.String, callback_btn)
         #self.pub_image = rospy.Publisher("/arom/UI/image", sensor_msgs.msg.Image)
-        self.pub_image = rospy.Publisher("/arom/camera/image", std_msgs.msg.String, queue_size=3, latch=False)
+        rospy.Subscriber("/arom/camera/config", arom.msg.CameraParam, self.setConfig)
+        self.pub_image = rospy.Publisher("/arom/camera/image", sensor_msgs.msg.Image, queue_size=0, latch=False)
 
         AromNode.__init__(self)
         self.set_feature('cam_controll',{'publish': '/camera/controll'})
         self.set_feature('cam_image',{'subscrib': '/camera/image'})
 
         self.stream = False
+        self.bridge = CvBridge()
 
 
         while not rospy.is_shutdown():
@@ -56,10 +64,16 @@ class AstroCam(AromNode):
 
                 if self.stream:
                     self.streamLoop()
+                else:
+                    time.sleep(0.5)
+                    self.getSetting()
 
             except Exception, e:
                 self.exit()
                 print e
+
+        def getCaptureName(self, extension = 'jpg'):
+            return str("capture"+extension)
 
         def setStream(self, value):
             raise NotImplementedError
@@ -68,6 +82,9 @@ class AstroCam(AromNode):
             print NotImplementedError
         
         def setFocuser(self, name = None, type = None):
+            raise NotImplementedError
+        
+        def setConfig(self, data = None):
             raise NotImplementedError
 
         def setCamera(self, id = None):
@@ -79,5 +96,12 @@ class AstroCam(AromNode):
         def getCameralist(self):
             raise NotImplementedError
 
+        def exit(self):
+            raise NotImplementedError
+
         def capture(self, n=1, camera = None, exposition = None, iso = None, focus = None, Zoom = None):
             raise NotImplementedError
+
+        def getSetting(self, name = None):
+            raise NotImplementedError
+

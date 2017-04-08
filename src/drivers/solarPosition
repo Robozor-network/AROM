@@ -30,16 +30,23 @@ class sunpos(AromNode):
         self.pub_error = rospy.Publisher("sun_err", geometry_msgs.msg.Point, queue_size=1)
         self.pub_pos = rospy.Publisher("sun_pos", geometry_msgs.msg.Point, queue_size=1)
         rospy.Subscriber("image_target", geometry_msgs.msg.Point, self.newTarget)
+        rospy.Subscriber("image_command", std_msgs.msg.String, self.getCommand)
 
         self.bridge = CvBridge()
         
-        cap = cv2.VideoCapture(1)
-        cap.set(cv2.CAP_PROP_BRIGHTNESS,-50)
-        cap.set(cv2.CAP_PROP_CONTRAST,25)
-        self.center = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)/2), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)/2))
+        cap = cv2.VideoCapture(0)
+        #cap.set(cv2.CAP_PROP_BRIGHTNESS,-50)
+        #cap.set(cv2.CAP_PROP_CONTRAST,25)
+        self.center = (int(cap.get(3)/2), int(cap.get(4)/2)) # ziskat sirku a vysku obrazku
         (centerx, centery) = self.center
         self.sun_center = None
-        self.target = (0,0)
+        self.target = self.center
+        self.status = 0
+
+                # None = 0
+                # Stop = 1
+                # Pause = 2
+                # Start = 3
 
         day = datetime.datetime.now().timetuple().tm_yday
         self.sun_declinationAngle =  (180/math.pi)*(23.45*math.pi/180*math.sin(2*math.pi*(284+day)/(36.25)))
@@ -53,53 +60,53 @@ class sunpos(AromNode):
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 ret, thresh = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
 
-                im2, contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+                contours = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+                #print len(contours)
+                contours, hierarchy = contours
+                #img, contours, hierarchy = contours
+
                 cv2.drawContours(frame, contours, -1, (0,255,0), 3)
-               
+                (offx, offy) = self.target
+
+                try:
+                    for i, cnt in enumerate(contours):
+                        area = cv2.contourArea(cnt)
+                        if area > 10000:
+                            epsilon = 10*cv2.arcLength(cnt,True)
+                            approx = cv2.approxPolyDP(cnt,epsilon,True)
+                            M = cv2.moments(cnt)
+
+                            cx = int(M['m10']/M['m00'])
+                            cy = int(M['m01']/M['m00'])
+                            self.sun_center = (cx, cy)
+                            
+                            ellipse = cv2.fitEllipse(cnt)
+                            cv2.ellipse(frame, ellipse, (10,10,225),2)       # vykresluje vypocitanou elipsu
 
 
+                            cv2.circle(frame, self.sun_center, 5, (255, 10, 10), 3) # vykresluje stred slunce
+                            cv2.putText(frame,'area: '+str(area),(cx,cy), cv2.FONT_HERSHEY_DUPLEX, 0.5,(120,120,120))
+                            cv2.putText(frame,'pos: ['+str(cx)+";"+str(cy)+"]",(cx,cy+20), cv2.FONT_HERSHEY_DUPLEX, 0.5,(120,120,120))
+                            cv2.putText(frame,'err: ['+str(cx-offx)+";"+str(cy-offy)+"]",(cx,cy+40), cv2.FONT_HERSHEY_DUPLEX, 0.5,(120,120,120))
 
-                for i, cnt in enumerate(contours):
-                #for cnt in [contours[0]]:
-                    area = cv2.contourArea(cnt)
-                    if area > 10000:
-                        epsilon = 10*cv2.arcLength(cnt,True)
-                        approx = cv2.approxPolyDP(cnt,epsilon,True)
-                        M = cv2.moments(cnt)
+                            cv2.line(frame, self.target, self.sun_center, (80, 80, 80)) 
 
-                        cx = int(M['m10']/M['m00'])
-                        cy = int(M['m01']/M['m00'])
-                        ellipse = cv2.fitEllipse(cnt)
+                            angleSunEq = math.tan((self.sun_declinationAngle+90)*math.pi/180)
+                            length = 100
+                            cv2.line(frame, (int(cx-1*length), int(cy-angleSunEq*length)), (int(cx+1*length), int(cy+angleSunEq*length)), (255, 100, 100), 1)
 
-                        self.sun_center = (cx, cy)
-                        (offx, offy) = self.target
-
-                        cv2.circle(frame, (cx, cy), 5, (255, 10, 10), 3)
-                        cv2.ellipse(frame, ellipse, (10,10,225),2)
-                        cv2.putText(frame,'area: '+str(area),(cx,cy), cv2.FONT_HERSHEY_DUPLEX, 0.5,(120,120,120))
-                        cv2.putText(frame,'pos: ['+str(cx)+";"+str(cy)+"]",(cx,cy+20), cv2.FONT_HERSHEY_DUPLEX, 0.5,(120,120,120))
-                
-
-
-                        cv2.putText(frame,'err: ['+str(centerx - cx-offx)+";"+str(centery - cy-offy)+"]",(cx,cy+40), cv2.FONT_HERSHEY_DUPLEX, 0.5,(120,120,120))
-                        cv2.line(frame, (cx+offx, cy+offy), (cx, cy), (80, 80, 80))
-
-                        cv2.circle(frame, (cx+offx, cy+offy), 5, (255, 10, 10), 3)
-
-                        angleSunEq = math.tan((self.sun_declinationAngle+90)*math.pi/180)
-                        length = 100
-                        cv2.line(frame, (int(cx-1*length), int(cy-angleSunEq*length)), (int(cx+1*length), int(cy+angleSunEq*length)), (255, 100, 100), 1, cv2.LINE_AA)
-
-
+                except Exception as e:
+                    print e
 
                 self.pub_error.publish(x = centerx - cx-offx, y = centery - cy-offy)
                 self.pub_pos.publish(x = cx, y = cy)
                 angle_y = math.tan(0*math.pi/180)
                 length = 1000
-                cv2.line(frame, (int(centerx-1*length), int(centery+angle_y*length)), (int(centerx+1*length), int(centery-angle_y*length)), (80, 80, 80), 1, cv2.LINE_AA)
+                cv2.line(frame, (int(centerx-1*length), int(centery+angle_y*length)), (int(centerx+1*length), int(centery-angle_y*length)), (80, 80, 80), 1)
 
-                cv2.circle(frame, self.center, 5, (200, 200, 10), 2, cv2.LINE_AA)
-                #cv2.circle(frame, self.target, 5, (255, 10, 10), 3)
+                cv2.circle(frame, self.center, 5, (200, 200, 10), 2)
+                cv2.circle(frame, self.target, 5, (255, 10, 10), 3)
+                cv2.putText(frame,'status: '+str(self.status),(10,20), cv2.FONT_HERSHEY_DUPLEX, 0.5,(120,120,120))
 
                 self.image_pub2.publish(self.bridge.cv2_to_imgmsg(thresh, "mono8"))
                 self.image_pub.publish(self.bridge.cv2_to_imgmsg(frame, "bgr8"))
@@ -111,10 +118,23 @@ class sunpos(AromNode):
     def newTarget(self, target):
         (csx, csy) = self.sun_center
         (cx, cy) = self.center
-        print target
+        (tx, ty) = (int(target.x), int(target.y))
+        print (tx, ty)
         print "=========="
-        self.target = (int(target.x-csx), int(target.y-csy))
+        self.target = (int(tx), int(ty))
         print self.target
+
+
+    def getCommand(self, command):
+        print command
+        if command.data == 'start':
+            self.status = 10
+
+        if command.data == 'pause':
+            self.status = 1
+
+        if command.data == 'recenter':
+            self.target = self.center
 
 
 

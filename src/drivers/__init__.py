@@ -11,7 +11,8 @@ class AromNode():
 
         try:
             if self.node_pymlab:
-                self.pymlabService = rospy.ServiceProxy('pymlab_drive', PymlabDrive)
+                #self.pymlabService = rospy.ServiceProxy('pymlab_drive', PymlabDrive)
+                self.pymlab = rospy.ServiceProxy('pymlab_drive', PymlabDrive)
                 rospy.set_param('/arom/node'+rospy.get_name()+"/pymlab", True)
             else:
                 rospy.set_param('/arom/node'+rospy.get_name()+"/pymlab", False)
@@ -24,8 +25,8 @@ class AromNode():
         self.node_name = rospy.get_name()
         print "Init done:", rospy.get_name()
 
-    def pymlab(self, *args, **kwds):
-        self.pymlabService(**kwds)
+    #def pymlab(self, *args, **kwds):
+    #    self.pymlabService(**kwds)
 
     def set_feature(self, name, value):
         rospy.set_param('/arom/node%s/feature/%s' %(str(rospy.get_name()),name), value)

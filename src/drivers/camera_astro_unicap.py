@@ -1,37 +1,35 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-import math
-import time
-import datetime
+import sys
+import os
+import getopt
+
+import time, datetime
 import rospy
 import std_msgs
-import actionlib
-import json
-from std_msgs.msg import String
-from std_msgs.msg import Float32
-from sensor_msgs.msg import Image
-from arom.srv import *
-from arom.msg import *
-from astropy.time import Time
+import sensor_msgs
+import arom
 from __init__ import AromNode
 
 import numpy as np
 from PIL import Image
-import StringIO
+from cv_bridge import CvBridge, CvBridgeError
 
+import subprocess
 
 import getopt
 import Image
 import unicap
-import subprocess
+
 
 import camera_astro
 
 #from camera_astro import AstroCam
 
    
-class ImaginSource(camera_astro.AstroCam):
-    node_name = "ImaginSource"
+class ImagingSource(camera_astro.AstroCam):
+    node_name = "ImagingSource"
     node_type = "AstroCam"
 
     def __init__(self):
@@ -51,7 +49,6 @@ class ImaginSource(camera_astro.AstroCam):
 
     def connect(self):
         print "-----start-----------------"
-        #print unicap.enumerate_devices()
         if not self.device_id:
             self.device_id = unicap.enumerate_devices()[0]
             print self.device_id
@@ -85,35 +82,6 @@ class ImaginSource(camera_astro.AstroCam):
         for prop in props:
             print prop['identifier'], ">>", prop
 
-
-        '''
-        props = self.device.enumerate_properties()
-        print "----", props
-        for prop in props:
-            print prop['identifier'], ">>", prop
-
-        try:
-            prop = self.device.get_property( 'Frame Rate' )
-            prop['value'] = 5.0
-            self.device.set_property( prop )
-        except Exception, e:
-            print e
-
-        try:
-            prop = self.device.get_property( 'shutter' )
-            prop['value'] = 25
-            self.device.set_property( prop )
-        except Exception, e:
-            print e
-
-
-        try:
-            prop = self.device.get_property( 'Gain' )
-            prop['value'] = 50.0
-            self.device.set_property( prop )
-        except Exception, e:
-            print e
-        '''
 
     def setFramerate(self, frameRate):
         print "======================"
@@ -156,27 +124,34 @@ class ImaginSource(camera_astro.AstroCam):
             print e
 
 
-    def capture(self, name = None, imgnum = 5, maximgnum = 10):
+    def capture(self, name = None, imgnum = 5, maximgnum = 10, save = True, publish = False):
         if not name:
             name = "/home/odroid/capture-%s.png" %time.strftime("%m-%d-%Y_%H-%M-%s")
         try:
-            #self.device.start_capture()
             print "start capture =============================="
             start = time.time()
-            print self.device.enumerate_properties()
+            #print self.device.enumerate_properties()
             buf = self.device.wait_buffer(40)
-            rgbbuf = buf.convert('RGB3')
-            #time.sleep(0.25)
-            #self.device.stop_capture()
+            print "capture 1", buf.convert
+            rgbbuf = buf.format['fourcc']
+            rgbbuf2 = buf.format['size']
+
+            #rgbbuf = buf.convert('RGB3')
+            print rgbbuf, rgbbuf2
             print buf
 
-            img = Image.frombytes( 'RGB', rgbbuf.format['size'], rgbbuf.tostring() )
-            print img
-            img.save( name, self.filetype )
-            img.save( "/home/odroid/last.jpg", self.filetype )
+            try:
+                print buf.convert('RGB3')
+            except Exception as e:
+                print e
 
-            self.pub_image.publish(name)
-            #self.pub_image.publish("/home/odroid/last.jpg")
+            #img = Image.frombytes( 'RGB', rgbbuf.format['size'], rgbbuf.tostring() )
+            #print img
+
+            #if save:
+            #    img.save(name, self.filetype)
+            #if publish:
+            #    self.pub_image.publish(self.bridge.cv2_to_imgmsg(frame, "bgr8"))
 
             print "end of capture ===================", time.time()-start
             
@@ -192,15 +167,8 @@ class ImaginSource(camera_astro.AstroCam):
         self.stream = bool(value)
 
     def streamLoop(self):
-        self.capture()
-        #buf = self.device.wait_buffer(40)
-        #rgbbuf = buf.convert('RGB3')
-        #img = Image.frombytes( 'RGB', rgbbuf.format['size'], rgbbuf.tostring() )
-        #img.save("/home/odroid/last.jpg", self.filetype )
-        #time.sleep(0.25)
-        #self.pub_image.publish("/home/odroid/last.jpg")
+        self.capture(save = False, publish = True, name = "loop")
         print "loop"
 
 if __name__ == '__main__':
-    ImaginSource()
-    #weatherStation = AWS01B()
+    ImagingSource()
