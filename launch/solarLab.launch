@@ -1,0 +1,49 @@
+<launch>
+
+    <include
+        file="/home/odroid/ros_ws/src/rosbridge_suite/rosbridge_server/launch/rosbridge_websocket.launch"
+    />
+
+    <node
+        name="pymlab"
+        pkg="arom"
+        type="pymlab_bridge"
+    />
+
+    <node
+        name="solarLab"
+        pkg="arom"
+        type="solarLab"
+    />
+
+    <node
+        name="lcd_client"
+        pkg="arom"
+        type="lcd_client"
+    />
+
+    <node
+        name="arom_beeper"
+        pkg="arom"
+        type="arom_beeper"
+    /> 
+
+    <node
+        name="irUI"
+        pkg="arom"
+        type="irUI.py"
+    /> 
+
+    <node
+        name="web"
+        pkg="arom"
+        type="runWeb.sh"
+    /> 
+
+    <node
+        name="web_video_server"
+        pkg="web_video_server"
+        type="web_video_server"
+    /> 
+
+</launch>

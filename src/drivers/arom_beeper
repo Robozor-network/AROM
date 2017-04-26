@@ -1,0 +1,78 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import time
+import rospy
+import std_msgs
+import wiringpi2
+from __init__ import AromNode
+
+
+class beeper(AromNode):
+    node_name = "beeper"
+    node_type = "beeper"
+    pin = 1
+
+    def __init__(self):
+        #self.pymlab2 = rospy.ServiceProxy('pymlab_drive', PymlabDrive)
+        self.btn_data = ['welcome']
+        wiringpi2.wiringPiSetup()
+        wiringpi2.softToneCreate(self.pin)
+        rospy.Subscriber("/beeper/preset", std_msgs.msg.String, self.callback_btn)
+
+        AromNode.__init__(self)
+        self.set_feature('beeper',{'types': {'horn': "horn", "welcome": "welcome", "btn": "Button"}})
+
+        rate = rospy.Rate(10)
+        #rospy.Timer(rospy.Duration(2), self.send_status, oneshot=False)
+        while not rospy.is_shutdown():
+            try:
+
+                if len(self.btn_data) > 0:
+                    print self.btn_data[0], len(self.btn_data)
+                    lastBtn = self.btn_data[0]
+                    self.btn_data.pop(0)
+
+
+                    print "incomming:", lastBtn
+
+                    if lastBtn == 'horn':
+                        print "horn"
+                        wiringpi2.softToneWrite(self.pin,440)
+                        time.sleep(.3)
+                        wiringpi2.softToneWrite(self.pin,880)
+                        time.sleep(.3)
+                        wiringpi2.softToneWrite(self.pin,0)
+
+
+                    elif lastBtn == 'btn':
+                        print "btn"
+                        for x in range(400, 600):
+                            wiringpi2.softToneWrite(self.pin,x)
+                            time.sleep(0.0005)
+                        wiringpi2.softToneWrite(self.pin,0)
+
+
+                    elif lastBtn == 'welcome':
+                        print "btn"
+                        for x in range(1, 11):
+                            wiringpi2.softToneWrite(self.pin,x*100+440)
+                            time.sleep(0.1)
+                        time.sleep(0.5)
+                        wiringpi2.softToneWrite(self.pin,0)
+
+
+
+
+            except Exception, e:
+                print e
+            rate.sleep()
+
+    def callback_btn(self, recive):
+        print recive
+        self.btn_data.append(recive.data)
+
+
+
+if __name__ == '__main__':
+    m = beeper()

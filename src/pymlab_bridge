@@ -10,6 +10,11 @@ import time
 from drivers.__init__ import AromNode
 
 
+#uncomment for debbug purposes
+import logging
+logging.basicConfig(level=logging.DEBUG) 
+
+
 def server(req):
     print req
     print "Returning [%s + %s]"%(req.name, req.data)
@@ -37,7 +42,7 @@ class pymlab_server(AromNode):
         s3 = rospy.Service('pymlab_drive', arom.srv.PymlabDrive, self.drive)
 
         AromNode.__init__(self)
-        self.set_feature('pymlab_structure',{'cfg': "/home/odroid/robozor/station/pymlab_presets/ZVPP.json"})
+        self.set_feature('pymlab_structure',{'cfg': "/home/odroid/robozor/station/pymlab_presets/SolarLab.json"})
         self.init()
 
 

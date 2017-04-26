@@ -1,0 +1,129 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import math
+import time
+import rospy
+import std_msgs
+import json
+import os
+from std_msgs.msg import String
+from std_msgs.msg import Float32
+from arom.srv import *
+from arom.msg import *
+import numpy as np
+from __init__ import AromNode
+
+
+aws_data = {}
+btn_data = []
+
+def callback_aws(recive):
+    global aws_data
+    for i, type in enumerate(recive.type):
+        aws_data[type] = recive.value[i]
+    #print aws_data
+
+def callback_btn(recive):
+    global btn_data
+    btn_data.append(recive.data)
+    #print recive, btn_data
+
+class lcdClient(AromNode):
+    node_name = "lcd_client"
+    node_type = "lcd_client"
+    node_pymlab = True
+    btn_data = []
+
+    def __init__(self):
+        print os.path.abspath(__file__)
+
+        rospy.Subscriber("/arom/UI/buttons", std_msgs.msg.String, self.callback_btn)
+        rospy.Subscriber("/arom/node/lcdText", std_msgs.msg.String, self.callback_btn)
+        rospy.Subscriber("/arom/node/lcdText", std_msgs.msg.String, self.callback_btn)
+        self.lcdText_pub = rospy.Publisher('/arom/node/lcdText', std_msgs.msg.String, queue_size=5)
+
+
+        AromNode.__init__(self)
+        #self.set_feature('display_show',{'rows': rows, 'cols': cols, 'publish': '/arom/node/lcdText'})
+        #self.set_feature('display_control', {'up': 'KEY_VOLUMEUP', 'down': 'KEY_VOLUMEDOWN', 'back': 'KEY_F2', 'enter': 'KEY_F3', 'subscrib': '/arom/UI/buttons'})
+
+
+        rospy.Subscriber(name = "/arom/node%s/rows" %(rospy.get_name()), data_class = std_msgs.msg.String, callback = self.RowData, callback_args=None)
+        rospy.Subscriber(name = "/arom/node%s/row1" %(rospy.get_name()), data_class = std_msgs.msg.String, callback = self.RowData, callback_args=1)
+        rospy.Subscriber(name = "/arom/node%s/row2" %(rospy.get_name()), data_class = std_msgs.msg.String, callback = self.RowData, callback_args=2)
+        rospy.Subscriber(name = "/arom/node%s/row3" %(rospy.get_name()), data_class = std_msgs.msg.String, callback = self.RowData, callback_args=3)
+        rospy.Subscriber(name = "/arom/node%s/row4" %(rospy.get_name()), data_class = std_msgs.msg.String, callback = self.RowData, callback_args=4)
+
+
+        ##
+        ##  Konec zakladni inicializace
+        ##
+
+        self.rows = 2
+        self.cols = 16
+
+        print "zinicializovano"
+
+        self.pymlab(device="StatusLCD",   method="reset")
+        self.pymlab(device="StatusLCD",   method="init")
+        self.pymlab(device="StatusLCD",   method="clear")
+        self.pymlab(device="StatusLCD",   method="home")
+
+        time.sleep(0.5)
+        self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineA="Welcome...", lineB="AROM    MLAB.cz")))
+
+        print "-------------"
+
+
+        rate = rospy.Rate(10)
+        ra = 0
+        dec = 90
+        while not rospy.is_shutdown():
+            try:
+                if len(self.btn_data) > 0:
+                    print self.btn_data[0], len(self.btn_data)
+                    lastBtn = self.btn_data[0]
+                    last_data = lastBtn.split(" ")
+                    self.btn_data.pop(0)
+
+                    print "incomming:", last_data
+                    
+                    if last_data[0] == 'KEY_MENU':
+                        print "light"
+                        self.pymlab(device="StatusLCD", method="lightToggle")
+
+
+            except Exception, e:
+                print e
+            time.sleep(0.1)
+
+    def setLCD(self, lineA, lineB):
+        self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineA=str(lineA), lineB=str(lineB))))
+        self.lcdText_pub.publish(str(lineA)+"\n"+str(lineB))
+
+
+    def callback_btn(self,recive):
+        self.btn_data.append(recive.data)
+
+    def RowData(self, recive, arg = None):
+        print "RowData", arg, recive
+        recive = str(recive.data)
+
+        if not arg:
+            recive += "\r\n " # tohle je ochrana pred tim, kdyz retezec nebude obsahovat EOL retezec
+            recive = recive.splitlines()
+            self.pymlab(device="StatusLCD", method="putsFull", parameters=str(dict(lineA=str(recive[0]), lineB=str(recive[1]))))
+        elif arg == 1:
+            self.pymlab(device="StatusLCD", method="putsFull", parameters=str(dict(lineA=str(recive), lineB = None) ))
+        elif arg == 2:
+            self.pymlab(device="StatusLCD", method="putsFull", parameters=str(dict(lineA=None, lineB = str(recive) )))
+        elif arg == 3:
+            self.pymlab(device="StatusLCD", method="putsFull", parameters=str(dict(lineA=None, lineB = None )))
+        elif arg == 4:
+            self.pymlab(device="StatusLCD", method="putsFull", parameters=str(dict(lineA=None, lineB = None )))
+
+
+
+if __name__ == '__main__':
+    m = lcdClient()
