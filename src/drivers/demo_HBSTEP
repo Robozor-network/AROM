@@ -37,7 +37,7 @@ class SolarLab(AromNode):
         rospy.Timer(rospy.Duration(1), self.get_status, oneshot=False)
         # spusteni funkce (self.getstatus), ktera bude periodicky volana (T=1s). 
 
-        self.motor_a = axis.axis(SPI = self.pymlab, SPI_CS = 0b0001, Direction = True, StepsPerUnit = 1, protocol = 'arom', arom_spi_name = 'mirrorRADEC')
+        self.motor_a = axis.axis(SPI = self.pymlab, SPI_CS = 0b0001, Direction = True, StepsPerUnit = 1, protocol = 'arom', arom_spi_name = 'spi')
         self.motor_a.Reset(KVAL_RUN = 0xE0, KVAL_ACC = 0xE0, KVAL_DEC = 0xE0, FS_SPD = 0xFFFF)
         #self.motor_a.setConfig(EXT_CLK = 0b1, OSC_SEL = 0b110) # Ext clock source: 24 MHz(Crystal/resonator driver disabled)
         self.motor_a.Float()
