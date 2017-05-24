@@ -30,6 +30,7 @@ class SolarLab(AromNode):
 
     def __init__(self):
 
+        self.bump = False  # toto se zaktivuje, kdyz motory dojedou na doraz.
         self.speedA = 0
         self.speedB = 0
         self.speedC = 0
@@ -68,19 +69,28 @@ class SolarLab(AromNode):
 
         #self.pymlab(device="gpio_mount", method="config_ports", parameters=str(dict(port0 = self.config0, port1 = self.config1)))
         
-        rospy.Timer(rospy.Duration(2), self.get_status, oneshot=False)
+        rospy.Timer(rospy.Duration(1), self.get_status, oneshot=False)
 
         self.motor_a = axis.axis(SPI = self.pymlab, SPI_CS = 0b0001, Direction = True, StepsPerUnit = 1, protocol = 'arom', arom_spi_name = 'mirrorRADEC')
         self.motor_b = axis.axis(SPI = self.pymlab, SPI_CS = 0b0010, Direction = True, StepsPerUnit = 1, protocol = 'arom', arom_spi_name = 'mirrorRADEC')
         self.motor_c = axis.axis(SPI = self.pymlab, SPI_CS = 0b0100, Direction = True, StepsPerUnit = 1, protocol = 'arom', arom_spi_name = 'mirrorTIME')
 
-        #self.motor_a.Reset()
-        #self.motor_b.Reset()
-        #self.motor_c.Reset()
+        self.motor_a.Reset(KVAL_RUN = 0xE0, KVAL_ACC = 0xE0, KVAL_DEC = 0xE0, FS_SPD = 0xFFFF)
+        self.motor_b.Reset(KVAL_RUN = 0xE0, KVAL_ACC = 0xE0, KVAL_DEC = 0xE0, FS_SPD = 0xFFFF)
+        self.motor_c.Reset(KVAL_RUN = 0xE0, KVAL_ACC = 0xE0, KVAL_DEC = 0xE0, FS_SPD = 0xFFFF)
+
+        self.motor_c.setConfig(EXT_CLK = 0b1, OSC_SEL = 0b110) # Ext clock source: 24 MHz(Crystal/resonator driver disabled)
 
         self.motor_a.Float()
         self.motor_b.Float()
         self.motor_c.Float()
+        self.direction = 1
+
+        self.motor_a.MaxSpeed(0x33FF)
+        self.motor_b.MaxSpeed(0x33FF)
+        self.motor_c.MaxSpeed(0x33FF)
+
+
         last_data = [None]
 
         rate = rospy.Rate(10)
@@ -130,15 +140,18 @@ class SolarLab(AromNode):
                         self.flag['tracking']= False
                         self.pub_imagecommand.publish("pause")
                         self.trackingSpd += 10
-                        self.motor_c.Run(0, self.trackingSpd)
+                        self.motor_c.Run(0, self.trackingSpd*self.direction)
                         #time.sleep(0.25)
 
                     elif last_data[0] == 'KEY_VOLUMEDOWN':
-                        self.flag['tracking']= False
-                        self.pub_imagecommand.publish("pause")
-                        self.trackingSpd -= 10
-                        self.motor_c.Run(0, self.trackingSpd)
-                        #time.sleep(0.25)
+                        self.direction *= -1
+                        if self.direction > 0:
+                            self.pub_lcd.publish("Zmena smeru \n Smer A %s" %(self.trackingSpd*self.direction))
+                        else:
+                            self.pub_lcd.publish("Zmena smeru \n Smer B %s" %(self.trackingSpd*self.direction))
+
+                        #self.motor_c.Run(0, self.trackingSpd*self.direction)
+
 
                     elif last_data[0] == 'KEY_OK':
                         self.flag['tracking']= True
@@ -147,30 +160,49 @@ class SolarLab(AromNode):
                             self.pub_imagetarget.publish(self.sunpos)
                         self.speedA = 0
                         self.speedB = 0
-                        self.motor_a.Run(0, self.speedA)
-                        self.motor_b.Run(0, self.speedB)
-                        self.motor_c.Run(0, self.trackingSpd)
+                        self.motor_a.Run(0, 0)
+                        self.motor_a.Float()
+                        time.sleep(0.5)
+                        self.motor_b.Run(0,0)
+                        self.motor_b.Float()
+                        time.sleep(0.5)
+                        self.motor_c.Run(0, self.trackingSpd*self.direction)
                         self.pub_imagecommand.publish("start")
-                        self.pub_lcd.publish("Start tracking \n status: %s" %(10))
+                        self.pub_lcd.publish("Start tracking \n status: %s" %(self.trackingSpd*self.direction))
 
                     elif last_data[0] == 'KEY_MUTE': # MUTE button - vse zastavi (vcetne hodinoveho stroje)
                         self.motor_a.Float()
                         self.motor_b.Float()
                         self.motor_c.Float()
+
                         self.flag['tracking']= False
                         self.pub_imagecommand.publish("stop")
                         self.pub_lcd.publish("STOP")
+
                         self.speedA = 0
                         self.speedB = 0
                         self.speedC = 0
 
+
+                        #self.motor_a.Reset(KVAL_RUN = 0x75, KVAL_ACC = 0xFF, KVAL_DEC = 0xFF, FS_SPD = 0xFFFFFF, init=False)
+                        #self.motor_b.Reset(KVAL_RUN = 0x75, KVAL_ACC = 0xFF, KVAL_DEC = 0xFF, FS_SPD = 0xFFFFFF, init=False)
+                        #self.motor_c.Reset(KVAL_RUN = 0x75, KVAL_ACC = 0xFF, KVAL_DEC = 0xFF, FS_SPD = 0xFFFFFF, init=False)
+
+                        #self.motor_c.setConfig(EXT_CLK = 0b1, OSC_SEL = 0b110) # Ext clock source: 24 MHz(Crystal/resonator driver disabled)
+
+
                     elif last_data[0] == 'KEY_HOME': # HOME button - navrati coelostat do polohy, kde bude 'prenocovavat'
                         self.pub_imagecommand.publish("recenter")
 
+
                     elif last_data[0] == 'KEY_BACK': # BACK - vyresetuje nastavení, vycentruje obraz na střed
                         self.trackingSpdDefault = int(rospy.get_param("/coelostat/speeds/tracking", 100))
-                        self.trackingSpd = self.trackingSpdDefault
-                        self.motor_c.Run(0, self.trackingSpd)
+                        self.trackingSpd = self.trackingSpdDefault*self.direction
+                        self.bump = False
+                        self.motor_a.Float()
+                        self.motor_b.Float()
+                        self.motor_c.Float()
+                        #self.motor_c.Run(0, self.trackingSpd)
                         print "back"
 
 
@@ -180,8 +212,7 @@ class SolarLab(AromNode):
 
                 
                 else:
-                    if last_data[0] == 'KEY_OK' and self.flag['tracking']== True:
-                        pass
+                    if last_data[0] == 'KEY_OK' and self.flag['tracking'] == True and self.bump == False:
                         try:
                             print "tracking"
 
@@ -195,7 +226,8 @@ class SolarLab(AromNode):
                                 self.motor_b.Run(0, spdB)
                                 spdBold = spdB
                         except Exception as e:
-                            print 'err3>', e
+                            pass
+                            #print 'err3>', e
 
 
                     #self.pymlab(device="gpio_mount", method="set_ports", parameters=str(dict(port0 = self.port0, port1= self.port1)))
@@ -215,14 +247,22 @@ class SolarLab(AromNode):
             self.motor_b_status = self.motor_b.GetStatus()
             self.motor_c_status = self.motor_c.GetStatus()
 
+            #print self.motor_a_status, self.motor_b_status, self.motor_c_status
+
             self.pub_motor_a.publish(json.dumps(self.motor_a_status, ensure_ascii=False))
             self.pub_motor_b.publish(json.dumps(self.motor_b_status, ensure_ascii=False))
             self.pub_motor_c.publish(json.dumps(self.motor_c_status, ensure_ascii=False))
             
             #print self.motor_a_status['SW_F'], self.motor_b_status['SW_F'], self.motor_c_status['SW_F']
             if self.motor_a_status['SW_F'] | self.motor_b_status['SW_F'] | self.motor_c_status['SW_F']:
-                print "Err"
+                self.bump = True
+                print "Err - SWITCH"
                 self.pub_beep.publish('horn')
+                self.pub_lcd.publish("POZOR!   A B C\n doraz   %s %s %s" %(int(self.motor_a_status['SW_F']), int(self.motor_b_status['SW_F']), int(self.motor_c_status['SW_F'])))
+
+                self.motor_a.Float()
+                self.motor_b.Float()
+                self.motor_c.Float()
 
         except Exception as e:
             print 'err2> ', e
