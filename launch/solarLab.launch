@@ -31,7 +31,7 @@
     <node
         name="irUI"
         pkg="arom"
-        type="irUI.py"
+        type="irUI"
     /> 
 
     <node
