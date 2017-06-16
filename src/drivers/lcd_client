@@ -45,6 +45,7 @@ class lcdClient(AromNode):
 
 
         AromNode.__init__(self)
+        self.set_feature('display_show',{'rows': 2, 'cols': 16, 'publish': '/arom/node/lcdText'})
         #self.set_feature('display_show',{'rows': rows, 'cols': cols, 'publish': '/arom/node/lcdText'})
         #self.set_feature('display_control', {'up': 'KEY_VOLUMEUP', 'down': 'KEY_VOLUMEDOWN', 'back': 'KEY_F2', 'enter': 'KEY_F3', 'subscrib': '/arom/UI/buttons'})
 
@@ -92,6 +93,10 @@ class lcdClient(AromNode):
                     if last_data[0] == 'KEY_MENU':
                         print "light"
                         self.pymlab(device="StatusLCD", method="lightToggle")
+                    
+                    elif last_data[0] == 'KEY_POWER':
+                        print "lightOff"
+                        self.pymlab(device="StatusLCD", method="light")
 
 
             except Exception, e:
@@ -114,10 +119,13 @@ class lcdClient(AromNode):
             recive += "\r\n " # tohle je ochrana pred tim, kdyz retezec nebude obsahovat EOL retezec
             recive = recive.splitlines()
             self.pymlab(device="StatusLCD", method="putsFull", parameters=str(dict(lineA=str(recive[0]), lineB=str(recive[1]))))
+            self.lcdText_pub.publish(str(recive[0])+"\n"+str(recive[1]))
         elif arg == 1:
             self.pymlab(device="StatusLCD", method="putsFull", parameters=str(dict(lineA=str(recive), lineB = None) ))
+            self.lcdText_pub.publish(str(recive)+"\n"+str(""))
         elif arg == 2:
             self.pymlab(device="StatusLCD", method="putsFull", parameters=str(dict(lineA=None, lineB = str(recive) )))
+            self.lcdText_pub.publish(str("")+"\n"+str(recive))
         elif arg == 3:
             self.pymlab(device="StatusLCD", method="putsFull", parameters=str(dict(lineA=None, lineB = None )))
         elif arg == 4:
