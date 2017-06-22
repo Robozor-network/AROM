@@ -1,0 +1,91 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import rospy
+import time
+import std_msgs
+
+from __init__ import AromNode
+
+
+class magnety(AromNode):
+    node_name = "MOTOR1"
+    node_type = "MOTOR1"
+    node_pymlab = True
+
+    def __init__(self, name = "MOTOR1"):
+      #  self.pub_btn = rospy.Publisher('/arom/UI/buttons', std_msgs.msg.String, queue_size=10)
+      #  self.pub_beep = rospy.Publisher('/beeper/preset', std_msgs.msg.String, queue_size=5)
+
+        AromNode.__init__(self)
+        self.set_feature('sendNum',{'addr': "/LED/duty", "name": "LED"})  #tady se nastaví "feature" pro webove rozhrani (tedy jaky ovladaci prvek se zobrazi)
+        self.set_feature('sendNum__1',{'addr': "/MOTOR1/duty", "name": "Magnet 1"})
+        self.set_feature('sendNum__2',{'addr': "/MOTOR2/duty", "name": "Magnet 2"})
+        self.set_feature('sendNum__3',{'addr': "/MOTOR3/duty", "name": "Magnet 3"})
+
+        rate = rospy.Rate(10)
+        rospy.Subscriber("/LED/duty", std_msgs.msg.String, self.callback)
+        rospy.Subscriber("/MOTOR1/duty", std_msgs.msg.String, self.magnet1)
+        rospy.Subscriber("/MOTOR2/duty", std_msgs.msg.String, self.magnet2)
+        rospy.Subscriber("/MOTOR3/duty", std_msgs.msg.String, self.magnet3)
+
+        #self.pymlab(device="i2cpwm", method="set_ls0", parameters=str(0b11111111))
+        self.pymlab(device="i2cpwmB", method="set_ls1", parameters=str(dict(mode = 0b11111111)))
+        self.pymlab(device="i2cpwmB", method="set_pwm1", parameters=str(dict(frequency = 100, duty = 50)))
+
+        while not rospy.is_shutdown():
+            rate.sleep()
+
+    def callback(self, recive):
+        print "led", recive
+        self.pymlab(device="i2cpwmB", method="set_pwm1", parameters=str(dict(frequency = 100, duty = 100 - int(recive.data))))
+
+    def magnet1(self, recive):
+        print "magnet1", recive
+        if int(recive.data) < 0:
+            duty = abs(int(recive.data))
+            self.pymlab(device="i2cpwmA", method="set_ls0", parameters=str(dict(mode = 0b10000000)))
+            time.sleep(0.1)
+            self.pymlab(device="i2cpwmA", method="set_pwm0", parameters=str(dict(frequency = 100, duty = duty)))
+            print duty
+        else:
+            duty = abs(int(recive.data))
+            self.pymlab(device="i2cpwmA", method="set_ls0", parameters=str(dict(mode = 0b00100000)))
+            time.sleep(0.1)
+            self.pymlab(device="i2cpwmA", method="set_pwm0", parameters=str(dict(frequency = 100, duty = duty)))
+            print duty
+
+    def magnet2(self, recive):
+        print "magnet2", recive
+        if int(recive.data) < 0:
+            duty = abs(int(recive.data))
+            self.pymlab(device="i2cpwmA", method="set_ls1", parameters=str(dict(mode = 0b11000000)))
+            time.sleep(0.1)
+            self.pymlab(device="i2cpwmA", method="set_pwm1", parameters=str(dict(frequency = 100, duty = duty)))
+            print duty
+        else:
+            duty = abs(int(recive.data))
+            self.pymlab(device="i2cpwmA", method="set_ls1", parameters=str(dict(mode = 0b00110000)))
+            time.sleep(0.1)
+            self.pymlab(device="i2cpwmA", method="set_pwm1", parameters=str(dict(frequency = 100, duty = duty)))
+            print duty
+
+    def magnet3(self, recive):
+        print "magnet3", recive
+        if int(recive.data) < 0:
+            duty = abs(int(recive.data))
+            self.pymlab(device="i2cpwmB", method="set_ls0", parameters=str(dict(mode = 0b10000000)))
+            time.sleep(0.1)
+            self.pymlab(device="i2cpwmB", method="set_pwm0", parameters=str(dict(frequency = 100, duty = duty)))
+            print duty
+        else:
+            duty = abs(int(recive.data))
+            self.pymlab(device="i2cpwmB", method="set_ls0", parameters=str(dict(mode = 0b00100000)))
+            time.sleep(0.1)
+            self.pymlab(device="i2cpwmB", method="set_pwm0", parameters=str(dict(frequency = 100, duty = duty)))
+            print duty
+
+
+if __name__ == '__main__':
+    m = magnety()
+
