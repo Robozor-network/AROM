@@ -18,10 +18,10 @@ class magnety(AromNode):
       #  self.pub_beep = rospy.Publisher('/beeper/preset', std_msgs.msg.String, queue_size=5)
 
         AromNode.__init__(self)
-        self.set_feature('sendNum',{'addr': "/LED/duty", "name": "LED"})  #tady se nastaví "feature" pro webove rozhrani (tedy jaky ovladaci prvek se zobrazi)
-        self.set_feature('sendNum__1',{'addr': "/MOTOR1/duty", "name": "Magnet 1"})
-        self.set_feature('sendNum__2',{'addr': "/MOTOR2/duty", "name": "Magnet 2"})
-        self.set_feature('sendNum__3',{'addr': "/MOTOR3/duty", "name": "Magnet 3"})
+        self.set_feature('sendNum',{'addr': "/LED/duty", "name": "LED", 'type': "range", 'min':0, 'max': 100})  #tady se nastaví "feature" pro webove rozhrani (tedy jaky ovladaci prvek se zobrazi)
+        self.set_feature('sendNum__1',{'addr': "/MOTOR1/duty", "name": "Magnet 1", 'min':-100, 'max': 100})
+        self.set_feature('sendNum__2',{'addr': "/MOTOR2/duty", "name": "Magnet 2", 'min':-100, 'max': 100})
+        self.set_feature('sendNum__3',{'addr': "/MOTOR3/duty", "name": "Magnet 3", 'min':-100, 'max': 100})
 
         rate = rospy.Rate(10)
         rospy.Subscriber("/LED/duty", std_msgs.msg.String, self.callback)
