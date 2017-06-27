@@ -1,0 +1,41 @@
+#!/usr/bin/python
+# -*- coding: utf8 -*-
+
+from setuptools import setup, find_packages
+import sys
+import os
+import os.path as path
+
+
+try: 
+    os.makedirs("SW/AROM/drivers/")
+except Exception as e:
+    print e
+    
+try: 
+    os.makedirs("SW/AROM/launch/")
+except Exception as e:
+    print e
+    
+try: 
+    os.makedirs("SW/AROM/web_features/")
+except Exception as e:
+    print e
+
+
+ros_path =  path.realpath(path.dirname(__file__)+"/../drivers")
+path, project = os.path.split(os.getcwd())
+print project
+print ros_path
+
+
+f = open('SW/AROM/drivers/__init__.py', 'w')
+f.write("""
+# Do not change this file!
+import sys
+sys.path.append('%s')
+""" %(ros_path))
+f.close()
+
+#os.popen('ln -s SW/AROM/drivers/* %s/project_%s/' %(ros_path, project))
+

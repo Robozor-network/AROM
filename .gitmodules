@@ -1,0 +1,3 @@
+[submodule "src/projects/TelescopeFocuser"]
+	path = src/projects/TelescopeFocuser
+	url = git@github.com:UniversalScientificTechnologies/TelescopeFocuser.git

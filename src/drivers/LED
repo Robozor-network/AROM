@@ -1,0 +1,52 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import rospy
+import time
+import std_msgs
+
+from __init__ import AromNode
+
+
+class irUI(AromNode):
+    node_name = "LED"
+    node_type = "LED"
+    node_pymlab = True
+
+    def __init__(self, name = "LED"):
+      #  self.pub_btn = rospy.Publisher('/arom/UI/buttons', std_msgs.msg.String, queue_size=10)
+      #  self.pub_beep = rospy.Publisher('/beeper/preset', std_msgs.msg.String, queue_size=5)
+
+        AromNode.__init__(self)
+        self.set_feature('sendNum',{'addr': "/led/duty"})  #tady se nastaví "feature" pro webove rozhrani (tedy jaky ovladaci prvek se zobrazi)
+
+        rate = rospy.Rate(10)
+        rospy.Subscriber("/led/duty", std_msgs.msg.String, self.callback)
+
+        #self.pymlab(device="i2cpwm", method="set_ls0", parameters=str(0b11111111))
+        self.pymlab(device="i2cpwm", method="set_ls0", parameters=str(dict(mode = 0b10101010)))
+	self.pymlab(device="i2cpwm", method="set_pwm0", parameters=str(dict(frequency = 100, duty = 50)))
+
+        while not rospy.is_shutdown():
+            try:
+                i=0
+                for i in xrange(0,100):
+                    pass
+                    #self.pymlab(device="i2cpwm", method="set_pwm0", parameters=str(dict(frequency = 100, duty = 100 - i)))
+                    # time.sleep(1)
+                    # self.pymlab(device="i2cpwm", method="set_pwm0", parameters=str(dict(frequency = 100, duty = 100)))
+                    time.sleep(0.1)
+                    #print i
+
+            except Exception, e:
+                rospy.logerr(e)
+            rate.sleep()
+
+    def callback(self, recive):
+        print recive
+        self.pymlab(device="i2cpwm", method="set_pwm0", parameters=str(dict(frequency = 100, duty = 100 - int(recive.data))))
+
+
+if __name__ == '__main__':
+    m = irUI()
+

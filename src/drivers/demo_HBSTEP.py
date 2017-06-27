@@ -1,0 +1,59 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import time
+import rospy
+import std_msgs
+import axis
+import json
+from __init__ import AromNode
+
+
+class SolarLab(AromNode):
+    node_name = "demo_hbstep"
+    node_type = "demo_hbstep"
+    node_pymlab = True
+
+    def __init__(self):
+
+
+        self.pub_motor_a = rospy.Publisher("/coleostat/motor_a", std_msgs.msg.String, queue_size=1)
+
+        AromNode.__init__(self)
+        self.set_feature('hbstep_status',  {'id': 'motor_a', 'name': 'Motor RA', 'toppic': '/coleostat/motor_a'})
+        
+        rospy.Timer(rospy.Duration(1), self.get_status, oneshot=False)
+
+        self.motor_a = axis.axis(SPI = self.pymlab, SPI_CS = 0b0001, Direction = True, StepsPerUnit = 1, protocol = 'arom', arom_spi_name = 'spi')
+        self.motor_a.Reset(KVAL_RUN = 0xE0, KVAL_ACC = 0xE0, KVAL_DEC = 0xE0, FS_SPD = 0xFFFF)
+        self.motor_a.Float()
+        self.motor_a.MaxSpeed(0x33FF)
+        time.sleep(2)
+
+        while not rospy.is_shutdown():
+            try:
+                self.motor_a.Run(direction = True, speed = 100)
+                time.sleep(5)
+                self.motor_a.Run(direction = True, speed = -100)
+                time.sleep(5)
+                self.motor_a.GoHome(wait = True)
+                time.sleep(2)
+            except Exception, e:
+                print "err1>", repr(e)
+
+
+        self.motor_a.Float()
+
+    def get_status(self, timer):
+        try:
+            self.motor_a_status = self.motor_a.GetStatus()
+            #print self.motor_a_status
+            self.pub_motor_a.publish(json.dumps(self.motor_a_status, ensure_ascii=False))
+            
+
+        except Exception as e:
+            print 'err2> ', repr(e)
+
+
+if __name__ == '__main__':
+    m = SolarLab()
