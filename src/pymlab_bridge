@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import rospy
+import sys
 import json
 from pymlab import config
 import arom
@@ -34,6 +35,11 @@ class pymlab_server(AromNode):
         self.i2c = []
         self.bus = []
 
+        bus_config = rospy.get_param('~config', "/home/odroid/robozor/station/telescope.json")
+        
+        try: bus_config = sys.argv[1]
+        except: pass
+        
 
         rospy.Subscriber("pymlab_server", arom.msg.msg_pymlabInit, self.status)
         
@@ -42,7 +48,7 @@ class pymlab_server(AromNode):
         s3 = rospy.Service('pymlab_drive', arom.srv.PymlabDrive, self.drive)
 
         AromNode.__init__(self)
-        self.set_feature('pymlab_structure',{'cfg': "/home/odroid/robozor/station/pymlab_presets/telescope.json"})
+        self.set_feature('pymlab_structure',{'cfg': bus_config})
         self.init()
 
 
@@ -196,6 +202,8 @@ class pymlab_server(AromNode):
             return str(False)
 
 def main():
+
+
     ps = pymlab_server()
     #rospy.init_node('pymlab_node')
             # slouzi k prijmuti requestu
