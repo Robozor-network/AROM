@@ -1,13 +1,22 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import rosgraph
 import rospy
 import os
+import sys
 from arom.srv import *
 from arom.msg import *
 
 class AromNode():
     def __init__(self):
+        try:
+            rosgraph.Master('/rostopic').getPid()
+        except Exception, e:
+            print ("Unable to communicate with master!")
+            print ("Try start ROSCORE or ROSLAUNCH some project")
+            sys.exit(0)
+            #raise e
 
         try:
             if self.node_pymlab:
@@ -17,6 +26,7 @@ class AromNode():
             else:
                 rospy.set_param('/arom/node'+rospy.get_name()+"/pymlab", False)
         except Exception, e:
+            print rospy.get_name()
             rospy.set_param('/arom/node'+rospy.get_name()+"/pymlab", False)
 
         print "Starting init"
