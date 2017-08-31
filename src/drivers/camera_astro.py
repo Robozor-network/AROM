@@ -35,7 +35,10 @@ class AstroCam(AromNode):
         self.set_feature('cam_image',{'subscrib': '/camera/image'})
 
         self.stream = False
+        self.capturing = False
         self.bridge = CvBridge()
+        self.getSetting()
+        i = 5
 
 
         while not rospy.is_shutdown():
@@ -48,6 +51,14 @@ class AstroCam(AromNode):
                     if lastAct[0] == 'capture' or lastAct[0] == 'KEY_FN_F5':
                         print "capture"
                         self.capture()
+
+                    elif lastAct[0] == 'startCapture':
+                        print "startCapture"
+                        self.capturing = True
+
+                    elif lastAct[0] == 'stopCapture':
+                        print "stopCapture"
+                        self.capturing = False
 
                     elif lastAct[0] == 'setExpo' or  lastAct[0] == 'setExposure':
                         self.setExposure(float(lastAct[1]))
@@ -62,11 +73,19 @@ class AstroCam(AromNode):
                     elif lastAct[0] == 'setGain':
                         self.setGain(float(lastAct[1]))
 
-                if self.stream:
+                if self.capturing:
+                    print "copturing"
+                    self.capture()
+
+                elif self.stream:
                     self.streamLoop()
+
                 else:
-                    time.sleep(0.5)
-                    self.getSetting()
+                    time.sleep(0.2)
+                    if i > 100:
+                        i = 0
+                        self.getSetting()
+                    i += 1
 
             except Exception, e:
                 self.exit()

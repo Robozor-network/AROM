@@ -129,6 +129,16 @@ class AstroCamCanon(camera_astro.AstroCam):
     def exit(self):
         print "ukoncuji program a odpojuji se od kamery"
 
+    def setConfig(self, data):
+        print "Data setConfig", data
+
+    def getSetting(self):
+        print "getSetting"
+        conf_dict = {}
+            
+        rospy.set_param('/arom/node%s/feature/%s/config' %(str(rospy.get_name()),'cam_controll'), conf_dict)
+        print "***********************"
+
     def setStream(self, value):
         self.stream = bool(value)
 

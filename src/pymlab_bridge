@@ -52,56 +52,73 @@ class pymlab_server(AromNode):
         self.init()
 
 
+        rate = rospy.Rate(0.2)
+        devices = self.devices
+        while True:
+            if self.err_count > 10:
+                rospy.logwarn("restarting pymlab")
+                self.init()
+                self.err_count = 0
+                #for i, bus in enumerate(self.bus):
+                #    try:
+                #        rospy.loginfo("reloading pymlab bus:" + repr(bus))
+                #        self.init_bus(i2c = self.i2c[i], bus = bus)
+                #    except Exception, e:
+                #        rospy.logerr(e)
+
+            rate.sleep()
+
+
     def init(self, cfg=None):
         print cfg
         try:
-            if cfg == None or cfg.default == True:
-                print "Inicializace pymlabu (nova verze)"
+            #if cfg == None or cfg.default == True:
+            print "Inicializace pymlabu (nova verze)"
 
-                self.i2c = []     #TODO: moznost pridavat dalsi smernice za behu - tzn. pridavat jen cast... To by bylo v zavislosti na nejake promene v srv filu
-                self.bus = []
-                rospy.set_param('/arom/node%s/devices'%(rospy.get_name()), {})
-                print "Pouzivana konfigurace:", rospy.get_param('/arom/node%s/feature/pymlab_structure/cfg'%(rospy.get_name()))
+            self.i2c = []     #TODO: moznost pridavat dalsi smernice za behu - tzn. pridavat jen cast... To by bylo v zavislosti na nejake promene v srv filu
+            self.bus = []
+            rospy.set_param('/arom/node%s/devices'%(rospy.get_name()), {})
+            print "Pouzivana konfigurace:", rospy.get_param('/arom/node%s/feature/pymlab_structure/cfg'%(rospy.get_name()))
 
-                with open(rospy.get_param('/arom/node%s/feature/pymlab_structure/cfg'%(rospy.get_name()))) as data_file:   #TODO: retezec k paramserveru podle nazvu nodu atd... 
-                    data = json.load(data_file)['children']
+            with open(rospy.get_param('/arom/node%s/feature/pymlab_structure/cfg'%(rospy.get_name()))) as data_file:   #TODO: retezec k paramserveru podle nazvu nodu atd... 
+                data = json.load(data_file)['children']
 
-                    for bus in data:
-                        try:
-                            self.cfg_i2c = bus
-                            #self.cfg_i2c.pop('children', None);     #TODO: zde by bylo dobre z JSONu odebrat 'children' index
+                for bus in data:
+                    try:
+                        self.cfg_i2c = bus
+                        #self.cfg_i2c.pop('children', None);     #TODO: zde by bylo dobre z JSONu odebrat 'children' index
 
-                            self.cfg_bus = bus['children']
+                        self.cfg_bus = bus['children']
 
-                            print json.dumps(self.cfg_i2c, indent=4, sort_keys=False)
-                            print json.dumps(self.cfg_bus, indent=4, sort_keys=False)
-                            rospy.set_param('/arom/node%s/devices/'%(rospy.get_name())+bus['name'], self.cfg_bus)
+                        print json.dumps(self.cfg_i2c, indent=4, sort_keys=False)
+                        print json.dumps(self.cfg_bus, indent=4, sort_keys=False)
+                        rospy.set_param('/arom/node%s/devices/'%(rospy.get_name())+bus['name'], self.cfg_bus)
 
-                            self.status = False
+                        self.status = False
 
-                            self.i2c.append(self.cfg_i2c)
-                            self.bus.append(self.cfg_bus)
+                        self.i2c.append(self.cfg_i2c)
+                        self.bus.append(self.cfg_bus)
 
-                            rospy.loginfo("konfiguracni data: \n\r %s" %str(cfg))
-                            self.init_bus(i2c = self.cfg_i2c, bus = self.cfg_bus)
-                        except Exception, e:
-                            rospy.logerr(e)
+                        rospy.loginfo("konfiguracni data: \n\r %s" %str(cfg))
+                        self.init_bus(i2c = self.cfg_i2c, bus = self.cfg_bus)
+                    except Exception, e:
+                        rospy.logerr("#init"+repr(e))
 
-                rospy.loginfo("Inicializace pymlabu problehla uspesne")
-                return True
+            rospy.loginfo("Inicializace pymlabu problehla uspesne")
+            return True
 
-            else: #TODO: Tato cast by mela byt v budoucnu odstranena....
-                self.status = False
+            #else: #TODO: Tato cast by mela byt v budoucnu odstranena....
+            #    self.status = False
 
-                self.cfg_i2c = eval(cfg.i2c)
-                self.i2c.append(self.cfg_i2c)
-                self.cfg_bus = eval(cfg.bus)
-                self.bus.append(self.cfg_bus)
+            #    self.cfg_i2c = eval(cfg.i2c)
+            #    self.i2c.append(self.cfg_i2c)
+            #    self.cfg_bus = eval(cfg.bus)
+            #    self.bus.append(self.cfg_bus)
 
-                rospy.loginfo("konfiguracni data: \n\r %s" %str(cfg))
-                self.init_bus(i2c = self.cfg_i2c, bus = self.cfg_bus)
+            #    rospy.loginfo("konfiguracni data: \n\r %s" %str(cfg))
+            #    self.init_bus(i2c = self.cfg_i2c, bus = self.cfg_bus)
 
-                return True
+            #    return True
         except Exception, e:
             rospy.logerr("#03:"+repr(e))
             return False

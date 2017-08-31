@@ -26,6 +26,9 @@ class user_input(arom_helper.AromNode):
         self.layer_pub = rospy.Publisher('/ui'+rospy.get_name()+'/layer', std_msgs.msg.String, queue_size=5, latch=True, tcp_nodelay=True)
         rospy.Subscriber("/ui"+rospy.get_name()+"/in/raw", std_msgs.msg.String, self.externalKey)
 
+        print "btn_publisher:", '/ui'+rospy.get_name()+'/out'
+        print "layer_publisher:", '/ui'+rospy.get_name()+'/layer'
+
         rate = rospy.Rate(10)
 
 
@@ -37,8 +40,8 @@ class user_input(arom_helper.AromNode):
         self.layer_count = 2
         self.toggle_button = 172
         self.setLayer()
-        self.device1 = evdev.InputDevice('/dev/input/event0')
-        self.device2 = evdev.InputDevice('/dev/input/event1')
+        self.device1 = evdev.InputDevice('/dev/input/event2')
+        self.device2 = evdev.InputDevice('/dev/input/event3')
         self.device1.grab()
         self.device2.grab()
 
@@ -46,7 +49,7 @@ class user_input(arom_helper.AromNode):
             self.toggleLED()
             time.sleep(0.1)
 
-        self.keymap = [{
+        keymap_patrola = [{
             172: 'shift',
             15:  'dome_a',
             155: 'dome_b',
@@ -95,6 +98,60 @@ class user_input(arom_helper.AromNode):
             83: None,
             96: None,
         }]
+
+        keymap_zvpp = [{
+            172: 'shift',
+            15:  'dome_a',
+            155: 'dome_b',
+            140: 'tracking_toggle',
+            69: 'telescopeA_close',
+            98: 'telescopeB_close',
+            55: 'telescopeC_close',
+            14: None,
+            71: 'telescopeA_irisM',
+            72: 'telescopeB_irisM',
+            73: 'telescopeC_irisM',
+            74: None,
+            75: 'telescopeA_irisP',
+            76: 'telescopeB_irisP',
+            77: 'telescopeC_irisP',
+            78: None,
+            79: 'telescopeA_focusM',
+            80: 'telescopeB_focusM',
+            81: 'telescopeC_focusM',
+            82: 'telescopeA_focusP',
+            11: 'telescopeB_focusP',
+            83: 'telescopeC_focusP',
+            96: None,
+        },{
+            172: 'shift',
+            15:  'dome_a',
+            155: 'dome_b',
+            140: 'tracking_toggle',
+            69: 'RA_center',
+            98: 'DEC_center',
+            55: None,
+            14: None,
+            71: None,
+            72: 'DEC_P',
+            73: None,
+            74: None,
+            75: 'RA_P',
+            76: 'STOP',
+            77: 'RA_M',
+            78: None,
+            79: None,
+            80: 'DEC_M',
+            81: None,
+            82: None,
+            11: None,
+            83: None,
+            96: None,
+        }]
+        
+
+        #self.keymap = keymap_patrola
+        self.keymap = keymap_zvpp
 
         data = []
 

@@ -24,9 +24,9 @@ if __name__ == "__main__":
                     "name":           "StatusLCD",
                     "type":           "i2clcd"
                 }
-                
+
     ])
-    
+
     i2c2 = str({
             "device": "serial",
             "port": '/dev/ttyUSB0',
@@ -35,7 +35,7 @@ if __name__ == "__main__":
                 {
                     "name":           "telescope_lts",
                     "type":           "lts01"
-                },{ 
+                },{
                     "name":           "telescope_spi", 
                     "type":           "i2cspi"
                 }#,{
@@ -44,9 +44,9 @@ if __name__ == "__main__":
                 #    "gauss":          0.88,
                 #    "address":        0x1E,
                 #}
-                
+
             ])
-    
+
 
 
 
@@ -57,5 +57,5 @@ if __name__ == "__main__":
     pymlab = rospy.ServiceProxy('pymlab_init', PymlabInit)
     print pymlab(i2c=i2c, bus=bus)
     print pymlab(i2c=i2c2, bus=bus2)
-    
+
     msg_pymlab.publish(name = "", data="{'start': True}")
