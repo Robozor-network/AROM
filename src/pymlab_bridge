@@ -21,7 +21,7 @@ def server(req):
     return GetSensValResponse( 10 )
 
 class pymlab_server(AromNode):
-    node_name = "pymlab_node"
+    node_name = "pymlab"
     node_type = "pymlab"
     node_pymlab = True
 
@@ -42,7 +42,7 @@ class pymlab_server(AromNode):
         s3 = rospy.Service('pymlab_drive', arom.srv.PymlabDrive, self.drive)
 
         AromNode.__init__(self)
-        self.set_feature('pymlab_structure',{'cfg': "/home/odroid/robozor/station/pymlab_presets/telescope.json"})
+        self.set_feature('pymlab_structure',{'cfg': "/home/odroid/robozor/station/pymlab_presets/SolarLab.json"})
         self.init()
 
 
