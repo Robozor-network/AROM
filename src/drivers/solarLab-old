@@ -102,7 +102,7 @@ class SolarLab(AromNode):
         #self.motor_c.Reset(KVAL_RUN = 0x29, KVAL_ACC = 0x39, KVAL_DEC = 0x39, FS_SPD = 0xFFFF, STEP_SEL = 0b011) #time motor
 
         self.motor_a.Reset(KVAL_RUN = 0x19, KVAL_ACC = 0x49, KVAL_DEC = 0x49, FS_SPD = 0xFFFF, STEP_SEL = 0b001) #leva prava
-        self.motor_b.Reset(KVAL_RUN = 0x09, KVAL_ACC = 0x19, KVAL_DEC = 0x19, FS_SPD = 0xFFFF, STEP_SEL = 0b001) #nahoru dolu
+        self.motor_b.Reset(KVAL_RUN = 0x19, KVAL_ACC = 0x39, KVAL_DEC = 0x39, FS_SPD = 0xFFFF, STEP_SEL = 0b001) #nahoru dolu
         self.motor_c.Reset(KVAL_RUN = 0x29, KVAL_ACC = 0x39, KVAL_DEC = 0x39, FS_SPD = 0xFFFF, STEP_SEL = 0b011) #time motor
 
         #nahoru dolu
@@ -130,6 +130,7 @@ class SolarLab(AromNode):
         last_data = [None]
 
         rate = rospy.Rate(10)
+        print "Solar lab !!!!!!!!!!!!!!!!!!"
         self.pub_beep.publish('welcome')
         self.pub_lcd.publish("Welcome...    OK\nAROM    MLAB.cz")
         
@@ -257,29 +258,34 @@ class SolarLab(AromNode):
                         self.motor_b.Float()
                         self.motor_c.Float()
 
-                        print "zacatek kalibrace 1"
+                        print "zacatek kalibrace 1 aaaa"
                         self.pub_lcd.publish("Kalibrace polohy\n   1 z 3")
+                        time.sleep(0.5)
                         self.motor_b.GoTo(-18000, wait=False)
-                        time.sleep(1)
+                        time.sleep(0.5)
                         self.motor_a.GoTo(-40000, wait=False)
 
                         while self.motor_a.IsBusy() or self.motor_b.IsBusy():
-                            time.sleep(0.3)
+                            time.sleep(1)
 
                         print "kalibrace 2"
                         self.pub_lcd.publish("Kalibrace polohy\n   1 z 2")
 
-                        print self.motor_b.getPosition()
+                        #print self.motor_a.getPosition()
+                        #print self.motor_b.getPosition()
+
                         time.sleep(0.5)
                         self.motor_b.ResetPos()
+                        time.sleep(0.5)
                         self.motor_a.ResetPos()
 
                         print "kalibrace 3"
                         self.pub_lcd.publish("Kalibrace polohy\n   1 z 3")
 
-                        self.motor_b.GoTo(16600/2, wait=False) #16600/4
-                        time.sleep(1)
-                        self.motor_a.GoTo(16000, wait=False)
+                        time.sleep(0.5)
+                        self.motor_b.GoToDir(16600/2, dir = 0) #16600/4
+                        #time.sleep(0)
+                        self.motor_a.GoToDir(16000, dir = 0)
 
                         while self.motor_a.IsBusy() or self.motor_b.IsBusy():
                             time.sleep(0.3)
@@ -391,20 +397,20 @@ class SolarLab(AromNode):
 
                 if self.mot_a_min > self.motor_a_pos:
                     self.pub_beep.publish('horn')
-                    self.pub_lcd.publish("POZOR!  limit A\n    jedte nahoru"
+                    self.pub_lcd.publish("POZOR! limit Az\n    jedte nahoru")
 
 		elif self.mot_a_max < self.motor_a_pos:
                     self.pub_beep.publish('horn')
-                    self.pub_lcd.publish("POZOR!  limit A\n      jedte dolu"
+                    self.pub_lcd.publish("POZOR! limit Az\n      jedte dolu")
 
 
                 if self.mot_b_min > self.motor_b_pos:
                     self.pub_beep.publish('horn')
-                    self.pub_lcd.publish("POZOR!  limit B\n   jedte doprava"
+                    self.pub_lcd.publish("POZOR!limit ALT\n   jedte doprava")
 
 		elif self.mot_b_max < self.motor_b_pos:
                     self.pub_beep.publish('horn')
-                    self.pub_lcd.publish("POZOR!  limit B\n    jedte doleva"
+                    self.pub_lcd.publish("POZOR limit ALT\n    jedte doleva")
 
 
         except Exception as e:
