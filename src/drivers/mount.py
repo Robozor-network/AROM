@@ -66,11 +66,6 @@ class mount(AromNode):
         self.raSpeedType = 0
         self.decSpeedType = 0
 
-        self.mount = drive(profile = 'HEQ5', mode = "eq", connectMethod = 'pymlab',
-            obs_lat = 48.986976, obs_lon = 14.467532, obs_alt = 382, port = '/dev/ttyUSB0')
-        
-        self.mount.run()
-        self.mount.UnPark()
 
         #self.mount.Slew(SkyCoord(alt = 45, az = 10, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
 
@@ -97,19 +92,28 @@ class mount(AromNode):
         self.set_feature('mount_skymap',{})
         #self.set_feature('mount_info',{'type': 'HEQ5', 'mount_mode': 'eq', 'obs_lat': 10.2332, 'obs_lon': 10.2332, 'obs_alt': 10.2332})
 
+
+
+        self.mount = drive(profile = 'HEQ5', mode = "eq", connectMethod = 'pymlab_bridge',
+            obs_lat = 48.986976, obs_lon = 14.467532, obs_alt = 382, port = self.pymlab)
+        self.mount.status_callback = self.mount_status_callback
+        self.mount.run()
+        self.mount.UnPark()
+
+
         (trackSpd_ra, trackSpd_dec) = self.mount.getDefaultTrackingSpd()
         print (trackSpd_ra, trackSpd_dec)
 
-        print "zinicializovano"
+        print(" zinicializovano ")
 
         rate = rospy.Rate(self.rate)
         ra = 0
         dec = 90
-        rospy.Timer(rospy.Duration(1), self.sendPosition, oneshot=False)
+        #rospy.Timer(rospy.Duration(5), self.sendPosition, oneshot=False)
         while not rospy.is_shutdown():
             try:
                 if len(btn_data) > 0:
-                    print btn_data[0], len(btn_data)
+                    print("btn_data:", btn_data[0], len(btn_data))
                     lastBtn = btn_data[0]
                     btn_data.pop(0)
 
@@ -248,9 +252,31 @@ class mount(AromNode):
                 self.pub_motor_a.publish(json.dumps(motor_a, ensure_ascii=False))
             if motor_b:
                 self.pub_motor_b.publish(json.dumps(motor_b, ensure_ascii=False))
+            mat = Float32MultiArray(data=[coord.ra.degree, coord.dec.degree])
+            self.pub_radec.publish(mat)
+            mat = Float32MultiArray(data=[coord_mount.ra.degree, coord_mount.dec.degree])
+            self.pub_radec_mount.publish(mat)
         except Exception, e:
-            print "send", e
+            print "Err-send", e
             
+
+    def mount_status_callback(self, coord, coord_mount, motor_a = False, motor_b = False):
+        try:
+            if motor_a:
+                self.pub_motor_a.publish(json.dumps(motor_a, ensure_ascii=False))
+            if motor_b:
+                self.pub_motor_b.publish(json.dumps(motor_b, ensure_ascii=False))
+
+            mat = Float32MultiArray(data=[coord.ra.degree, coord.dec.degree])
+            self.pub_radec.publish(mat)
+            
+            mat = Float32MultiArray(data=[coord_mount.ra.degree, coord_mount.dec.degree])
+            self.pub_radec_mount.publish(mat)
+
+        except Exception, e:
+            print "Err-send", e
+            
+
 
 
 

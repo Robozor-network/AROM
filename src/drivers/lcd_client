@@ -116,7 +116,7 @@ class lcdClient(AromNode):
         recive = str(recive.data)
 
         if not arg:
-            recive += "\r\n " # tohle je ochrana pred tim, kdyz retezec nebude obsahovat EOL retezec
+            recive += "\n " # tohle je ochrana pred tim, kdyz retezec nebude obsahovat EOL retezec
             recive = recive.splitlines()
             self.pymlab(device="StatusLCD", method="putsFull", parameters=str(dict(lineA=str(recive[0]), lineB=str(recive[1]))))
             self.lcdText_pub.publish(str(recive[0])+"\n"+str(recive[1]))

@@ -22,6 +22,7 @@ add_message_files(
    msg_aws.msg
 
    CameraParam.msg
+   xyPos.msg
 
 #   Message1.msg
 #   Message2.msg

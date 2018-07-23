@@ -59,12 +59,6 @@ class pymlab_server(AromNode):
                 rospy.logwarn("restarting pymlab")
                 self.init()
                 self.err_count = 0
-                #for i, bus in enumerate(self.bus):
-                #    try:
-                #        rospy.loginfo("reloading pymlab bus:" + repr(bus))
-                #        self.init_bus(i2c = self.i2c[i], bus = bus)
-                #    except Exception, e:
-                #        rospy.logerr(e)
 
             rate.sleep()
 
@@ -77,6 +71,10 @@ class pymlab_server(AromNode):
 
             self.i2c = []     #TODO: moznost pridavat dalsi smernice za behu - tzn. pridavat jen cast... To by bylo v zavislosti na nejake promene v srv filu
             self.bus = []
+
+            if cfg and cfg.config != '':
+                rospy.set_param('/arom/node{}/feature/pymlab_structure/cfg'.format(rospy.get_name()), cfg.config)
+
             rospy.set_param('/arom/node%s/devices'%(rospy.get_name()), {})
             print "Pouzivana konfigurace:", rospy.get_param('/arom/node%s/feature/pymlab_structure/cfg'%(rospy.get_name()))
 
@@ -226,7 +224,10 @@ def main():
             # slouzi k prijmuti requestu
 
     rospy.loginfo("Ready to get work.")
-    rospy.spin()
+    while True:
+        time.sleep(0.3)
+
+    #rospy.spin()
 
 if __name__ == "__main__":
     main()
