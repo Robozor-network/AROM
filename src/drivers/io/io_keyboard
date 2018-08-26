@@ -38,10 +38,10 @@ class user_input(arom_helper.AromNode):
 
         self.led_status = 0
         self.layer_count = 2
-        self.toggle_button = 172
+        self.toggle_button = 69
         self.setLayer()
-        self.device1 = evdev.InputDevice('/dev/input/event2')
-        self.device2 = evdev.InputDevice('/dev/input/event3')
+        self.device1 = evdev.InputDevice('/dev/input/event6')
+        self.device2 = evdev.InputDevice('/dev/input/event5')
         self.device1.grab()
         self.device2.grab()
 
@@ -100,46 +100,48 @@ class user_input(arom_helper.AromNode):
         }]
 
         keymap_zvpp = [{
-            172: 'shift',
-            15:  'dome_a',
-            155: 'dome_b',
-            140: 'tracking_toggle',
-            69: 'telescopeA_close',
-            98: 'telescopeB_close',
-            55: 'telescopeC_close',
-            14: None,
-            71: 'telescopeA_irisM',
-            72: 'telescopeB_irisM',
-            73: 'telescopeC_irisM',
-            74: None,
-            75: 'telescopeA_irisP',
-            76: 'telescopeB_irisP',
-            77: 'telescopeC_irisP',
-            78: None,
-            79: 'telescopeA_focusM',
-            80: 'telescopeB_focusM',
-            81: 'telescopeC_focusM',
-            82: 'telescopeA_focusP',
-            11: 'telescopeB_focusP',
-            83: 'telescopeC_focusP',
-            96: None,
-        },{
-            172: 'shift',
-            15:  'dome_a',
-            155: 'dome_b',
-            140: 'tracking_toggle',
-            69: 'RA_center',
-            98: 'DEC_center',
+            69: 'shift',
+            15:  None,
+            155: None,
+            140: None,
+            690: None,
+            98: None,
+            51: 'A',
             55: None,
-            14: None,
+            14: 'gpio_3_toggle',
             71: None,
             72: 'DEC_P',
             73: None,
-            74: None,
+            74: 'B',
+            75: 'RA_M',
+            76: 'STOP',
+            77: 'RA_P',
+            78: 'C',
+            79: None,
+            80: 'DEC_M',
+            81: None,
+            82: None,
+            11: None,
+            83: None,
+            96: None,
+        },{
+            69: 'shift',
+            15:  None,
+            155: None,
+            140: None,
+            690: None,
+            98: None,
+            51: 'A',
+            55: None,
+            14: 'gpio_3_toggle',
+            71: None,
+            72: 'DEC_P',
+            73: None,
+            74: 'B',
             75: 'RA_P',
             76: 'STOP',
             77: 'RA_M',
-            78: None,
+            78: 'C',
             79: None,
             80: 'DEC_M',
             81: None,
@@ -161,6 +163,7 @@ class user_input(arom_helper.AromNode):
                     while True:
                         dev_out = dev.next()
                         if dev_out.type == ecodes.EV_KEY and dev_out.value in [0,1]:
+                            print(dev_out)
                             data.append(self.GetKey(dev_out))
                 except Exception as e:
                     pass

@@ -35,7 +35,7 @@ class pymlab_server(AromNode):
         self.i2c = []
         self.bus = []
 
-        bus_config = rospy.get_param('~config', "/home/odroid/robozor/station/telescope.json")
+        bus_config = rospy.get_param('~config', "/home/odroid/robozor/station/pymlab_presets/telescope.json")
         
         try: bus_config = sys.argv[1]
         except: pass
