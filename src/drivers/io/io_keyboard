@@ -4,7 +4,8 @@
 import evdev
 from evdev import InputDevice, categorize, ecodes
 from select import select
-import time, os
+import time, os, sys
+import json
 import rospy
 import std_msgs
 import arom_helper
@@ -49,109 +50,66 @@ class user_input(arom_helper.AromNode):
             self.toggleLED()
             time.sleep(0.1)
 
-        keymap_patrola = [{
-            172: 'shift',
-            15:  'dome_a',
-            155: 'dome_b',
-            140: 'tracking_toggle',
-            69: 'telescopeA_close',
-            98: 'telescopeB_close',
-            55: 'telescopeC_close',
-            14: None,
-            71: 'telescopeA_irisM',
-            72: 'telescopeB_irisM',
-            73: 'telescopeC_irisM',
-            74: None,
-            75: 'telescopeA_irisP',
-            76: 'telescopeB_irisP',
-            77: 'telescopeC_irisP',
-            78: None,
-            79: 'telescopeA_focusM',
-            80: 'telescopeB_focusM',
-            81: 'telescopeC_focusM',
-            82: 'telescopeA_focusP',
-            11: 'telescopeB_focusP',
-            83: 'telescopeC_focusP',
-            96: None,
-        },{
-            172: 'shift',
-            15:  'dome_a',
-            155: 'dome_b',
-            140: 'tracking_toggle',
-            69: 'RA_center',
-            98: 'DEC_center',
+        self.keymap = [{
+            172: None,
+            15:  None,
+            155: None,
+            140: None,
+            69: None,
+            98: None,
             55: None,
             14: None,
             71: None,
-            72: 'DEC_P',
+            72: None,
             73: None,
             74: None,
-            75: 'RA_P',
+            75: None,
             76: None,
-            77: 'RA_M',
+            77: None,
             78: None,
             79: None,
-            80: 'DEC_M',
+            80: None,
             81: None,
             82: None,
             11: None,
             83: None,
             96: None,
-        }]
-
-        keymap_zvpp = [{
-            172: 'shift',
-            15:  'dome_a',
-            155: 'dome_b',
-            140: 'tracking_toggle',
-            69: 'telescopeA_close',
-            98: 'telescopeB_close',
-            55: 'telescopeC_close',
-            14: None,
-            71: 'telescopeA_irisM',
-            72: 'telescopeB_irisM',
-            73: 'telescopeC_irisM',
-            74: None,
-            75: 'telescopeA_irisP',
-            76: 'telescopeB_irisP',
-            77: 'telescopeC_irisP',
-            78: None,
-            79: 'telescopeA_focusM',
-            80: 'telescopeB_focusM',
-            81: 'telescopeC_focusM',
-            82: 'telescopeA_focusP',
-            11: 'telescopeB_focusP',
-            83: 'telescopeC_focusP',
-            96: None,
         },{
-            172: 'shift',
-            15:  'dome_a',
-            155: 'dome_b',
-            140: 'tracking_toggle',
-            69: 'RA_center',
-            98: 'DEC_center',
+            172: None,
+            15:  None,
+            155: None,
+            140: None,
+            69: None,
+            98: None,
             55: None,
             14: None,
             71: None,
-            72: 'DEC_P',
+            72: None,
             73: None,
             74: None,
-            75: 'RA_P',
-            76: 'STOP',
-            77: 'RA_M',
+            75: None,
+            76: None,
+            77: None,
             78: None,
             79: None,
-            80: 'DEC_M',
+            80: None,
             81: None,
             82: None,
             11: None,
             83: None,
             96: None,
         }]
-        
 
-        #self.keymap = keymap_patrola
-        self.keymap = keymap_zvpp
+        if len(sys.argv) < 1:
+            print("Using default configuration")
+            print("YouCan use 'rosrun arom io_keyboard <path_to_file>")
+        else:
+            cfgfile = sys.argv[1]
+            print("Using configuration from {}".format(cfgfile))
+            #TODO: validace existence souboru
+            self.keymap = json.loads(open(cfgfile).read())
+        print('Keymap:')
+        print(json.dumps(self.keymap, indent=4, sort_keys=False))
 
         data = []
 
@@ -164,7 +122,6 @@ class user_input(arom_helper.AromNode):
                             data.append(self.GetKey(dev_out))
                 except Exception as e:
                     pass
-
             rate.sleep()
 
 
@@ -175,20 +132,20 @@ class user_input(arom_helper.AromNode):
                 self.toggleLED()
                 self.btn_pub.publish("layer"+str(layer))
         else:
-            key = self.keymap[self.layer][event.code]
+            key = self.keymap[self.layer][str(event.code)]
             if key:
                 self.btn_pub.publish(str(key)+str(event.value))
                 self.blikLED()
-                print "KEY:", (key, event.value)
-                return (key, event.value)
+                print("KEY:", (key, event.value))
+                return(key, event.value)
             else:
-                print "Klavesa nenastavena"
+                print("Klavesa nenastavena")
 
     def externalKey(self, event):
-        print event
+        print(event)
         value = {'d': 1L, 'u': 0L}[event.data[-1]]
         code = int(event.data[:-1])
-        print code, value
+        print(code, value)
 
         if code == self.toggle_button:
             if value == 1:
@@ -196,14 +153,14 @@ class user_input(arom_helper.AromNode):
                 self.toggleLED()
                 self.btn_pub.publish("layer"+str(layer))
         else:
-            key = self.keymap[self.layer][code]
+            key = self.keymap[self.layer][str(code)]
             if key:
                 self.btn_pub.publish(str(key)+str(value))
                 self.blikLED()
-                print "KEY:", (key, value)
-                return (key, value)
+                print("KEY:", (key, value))
+                return(key, value)
             else:
-                print "Klavesa nenastavena"
+                print("Klavesa nenastavena")
 
     def setLayer(self, layer = 0):
         self.layer = layer
