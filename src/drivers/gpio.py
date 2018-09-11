@@ -34,12 +34,12 @@ class gpio_mount(AromNode):
         self.config1 = 0x00
         self.port0 = 0b00000000
         self.port1 = 0b00000000
-        self.devices0 = ['mount_pwr', 'laser_pwr', '12V_3', '12V_4', 'laser_status', None, None, None]
+        self.devices0 = ['mount_pwr', 'laser_pwr', '12V_3', 'laser_status', 'Empty', None, None, None]
         #self.devices0 = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
         self.devices1 = [None, None, None, None, None, None, None, None]
 
         rospy.Subscriber("/gpio/gpio_mount", String, callback_btn)
-        self.pub_status = rospy.Publisher('/gpio/gpio_status', String, queue_size=10)
+        self.pub_status = rospy.Publisher('/gpio/gpio_status', String, queue_size=2, latch=True)
 
         AromNode.__init__(self)
         self.set_feature('gpio_set_port',{'ports': 8, 'devices': str(self.devices0) ,'subscrib': '/gpio/gpio_mount'})

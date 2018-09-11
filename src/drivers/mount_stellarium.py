@@ -4,6 +4,7 @@
 
 
 #
+# Protokol pro posilani a prijimani dat ze Stellaria
 # http://yoestuve.es/blog/communications-between-python-and-stellarium-stellarium-telescope-protocol/
 #
 
@@ -38,8 +39,8 @@ class StellariumRemote(asyncore.dispatcher):
     def __init__(self):
         asyncore.dispatcher.__init__(self)
         
-        TCP_IP = ''
-        TCP_PORT = 1234
+        TCP_IP = '0.0.0.0'
+        TCP_PORT = rospy.get_param('port', 1234)
         BUFFER_SIZE = 1024
 
         self.dataRaDec = {'ra': 0, 'dec':0}
@@ -47,6 +48,7 @@ class StellariumRemote(asyncore.dispatcher):
         self.NewPos = False
 
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        print("Adresa {}:{}".format(TCP_IP, TCP_PORT))
         self.s.bind((TCP_IP, TCP_PORT))
         self.s.listen(1)
         print "cekam na spojeni"
@@ -54,7 +56,7 @@ class StellariumRemote(asyncore.dispatcher):
         self.conn.setblocking(False)
         print('Connected by', addr)
         #self.s.setblocking(0)
-        self.s.settimeout(1)
+        self.s.settimeout(0.5)
         #elf.clients = [self.s, conn]
         #print TCP_IP, ":", TCP_PORT
         self.run()
@@ -72,17 +74,16 @@ class StellariumRemote(asyncore.dispatcher):
         if pair is not None:
             sock, addr = pair
             self.sock = sock
-            print 'Incoming connection from %s' % repr(addr)
+            print('Incoming connection from %s' % repr(addr))
             handler = EchoHandler(sock)
 
     def  run(self):
-
         try:
-            print "spostim smycku"
+            print("spostim smycku")
             rospy.Subscriber("/mount/status/coordinates/RaDec", Float32MultiArray, self.callback_RaDec)
             self.sendCoord = rospy.Publisher('/mount/controll', String, queue_size=5)
             rospy.init_node('AROM_stellarium')
-            print "node inicializovan"
+            print("node inicializovan")
             data_rec = None
 
             while not rospy.is_shutdown():
@@ -92,7 +93,7 @@ class StellariumRemote(asyncore.dispatcher):
                     if data_rec:
                         self.GetPosition(data_rec)
                         data_rec = None
-                        print  "Diky"
+                        print ("Diky")
                 except Exception as e:
                     if e.args[0] == 11:
                         # nejsou nova data
@@ -103,51 +104,10 @@ class StellariumRemote(asyncore.dispatcher):
             self.s.close()
                 
         except Exception as e:
-            print e, e.args
+            self.s.close()
+            print(e, e.args)
+            self.__init__()
 
-        finally:
-            self.conn.close()
-
-
-
-        '''
-
-        try:         
-            while not rospy.is_shutdown():
-                if not dataSocket:
-                    print "received data:", dataSocket
-                    
-                    try:
-                        array = bytearray(dataSocket)
-                        lenght = array[0] | array[1] << 8
-                        type = array[2] | array[3] << 8
-                        timed = array[4] | array[5]<< 8 | array[6]<< 8*2 | array[7] << 8*3 | array[8] << 8*4| array[9] << 8*5| array[10] << 8*6| array[11] << 8*7
-                        ra  = array[12] | array[13]<< 8 | array[14]<< 8*2 | array[15] << 8*3
-                        dec = array[16] | array[17]<< 8 | array[18]<< 8*2 | array[19] << 8*3
-
-                        if dec > 0x40000000:
-                            dec = dec-0xffffffff
-                        if ra > 0xff000000:
-                            ra = ra-0xffffffff
-
-                        ra = ra/11930465
-                        dec = dec/11930465
-
-                        print "Slew - RaDec", ra, dec
-
-                        #self.SendPosition()
-
-                        
-                    except Exception, e:
-                        print e
-                    dataSocket = None
-
-                self.SendPosition()
-                    
-                
-        except Exception, e:
-            print e
-        '''
 
     def SendPosition(self):
         try:
@@ -168,11 +128,10 @@ class StellariumRemote(asyncore.dispatcher):
                                 chr((ra) & 0xFF), chr((ra >> 8) & 0xFF), chr((ra >> 16) & 0xFF), chr((ra >> 24) & 0xFF),
                                 chr((dec) & 0xFF), chr((dec >> 8) & 0xFF), chr((dec >> 16) & 0xFF), chr((dec >> 24) & 0xFF),
                                 chr((status) & 0xFF), chr((status >> 8) & 0xFF), chr((status >> 16) & 0xFF), chr((status >> 24) & 0xFF) ])
-            #print "posilam", array
             return str(bytes(array))
             
-        except Exception, e:
-            print "ERROR1:", repr(e)
+        except Exception as e:
+            print("ERROR1:", repr(e))
 
     def GetPosition(self, string):
         try:
@@ -187,7 +146,6 @@ class StellariumRemote(asyncore.dispatcher):
             print (hex(ra), hex(dec))
             if ra < 0xffffffff/2: ra = (ra*360.0/0xffffffff)
             else: ra = -((0xffffffff-ra)*360.0/0xffffffff)
-            #ra = (ra*360.0/0xffffffff)
             if dec < 0xffffffff/2: dec = (dec*360.0/0xffffffff)
             else: dec = -((0xffffffff-dec)*360.0/0xffffffff)
             print ra, dec
@@ -199,8 +157,6 @@ class StellariumRemote(asyncore.dispatcher):
                 'TIME': time
             }
             self.sendCoord.publish("radec %f %f"%(ra, dec))
-            #print data & 0xffff
-            #print int(data & 0xffff)
         except Exception as e:
             raise e
        

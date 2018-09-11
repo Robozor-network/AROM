@@ -40,7 +40,7 @@ class lcdClient(AromNode):
 
         rospy.Subscriber("/arom/UI/buttons", std_msgs.msg.String, self.callback_btn)
         rospy.Subscriber("/arom/node/lcdText", std_msgs.msg.String, self.callback_btn)
-        #rospy.Subscriber("/arom/node/lcdText", std_msgs.msg.String, self.callback_btn)
+        rospy.Subscriber("/arom/node/lcdText", std_msgs.msg.String, self.callback_btn)
         self.lcdText_pub = rospy.Publisher('/arom/node/lcdText', std_msgs.msg.String, queue_size=5)
 
 
@@ -72,7 +72,7 @@ class lcdClient(AromNode):
         self.pymlab(device="StatusLCD",   method="home")
 
         time.sleep(0.5)
-        self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineA="Welcome ...", lineB="AROM    MLAB.cz")))
+        self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineA="Welcome...", lineB="AROM    MLAB.cz")))
 
         print "-------------"
 
@@ -97,9 +97,6 @@ class lcdClient(AromNode):
                     elif last_data[0] == 'KEY_POWER':
                         print "lightOff"
                         self.pymlab(device="StatusLCD", method="light")
-                    else:
-                        #self.setLCD("TEST", "test")
-                        print "Data not sended to LCD display"
 
 
             except Exception, e:
@@ -107,9 +104,8 @@ class lcdClient(AromNode):
             time.sleep(0.1)
 
     def setLCD(self, lineA, lineB):
-        self.pymlab(device="StatusLCD", method="clear")
         self.pymlab(device="StatusLCD",   method="putsFull", parameters=str(dict(lineA=str(lineA), lineB=str(lineB))))
-        #self.lcdText_pub.publish(str(lineA)+"\n"+str(lineB))
+        self.lcdText_pub.publish(str(lineA)+"\n"+str(lineB))
 
 
     def callback_btn(self,recive):
@@ -139,3 +135,4 @@ class lcdClient(AromNode):
 
 if __name__ == '__main__':
     m = lcdClient()
+

@@ -39,10 +39,10 @@ class user_input(arom_helper.AromNode):
 
         self.led_status = 0
         self.layer_count = 2
-        self.toggle_button = 172
+        self.toggle_button = 69
         self.setLayer()
-        self.device1 = evdev.InputDevice('/dev/input/event2')
-        self.device2 = evdev.InputDevice('/dev/input/event3')
+        self.device1 = evdev.InputDevice('/dev/input/event6')
+        self.device2 = evdev.InputDevice('/dev/input/event5')
         self.device1.grab()
         self.device2.grab()
 
@@ -74,6 +74,7 @@ class user_input(arom_helper.AromNode):
             11: None,
             83: None,
             96: None,
+<<<<<<< HEAD
         },{
             172: None,
             15:  None,
@@ -81,16 +82,61 @@ class user_input(arom_helper.AromNode):
             140: None,
             69: None,
             98: None,
+=======
+        }]
+
+        keymap_zvpp = [{
+            69: 'shift',
+            15:  None,
+            155: None,
+            140: None,
+            690: None,
+            98: None,
+            51: 'A',
             55: None,
-            14: None,
+            14: 'gpio_3_toggle',
+            71: None,
+            72: 'DEC_P',
+            73: None,
+            74: 'B',
+            75: 'RA_M',
+            76: 'STOP',
+            77: 'RA_P',
+            78: 'C',
+            79: None,
+            80: 'DEC_M',
+            81: None,
+            82: None,
+            11: None,
+            83: None,
+            96: None,
+        },{
+            69: 'shift',
+            15:  None,
+            155: None,
+            140: None,
+            690: None,
+            98: None,
+            51: 'A',
+>>>>>>> 1fbe164a9eaccf3b469b6b474b2ffdf9db2c0038
+            55: None,
+            14: 'gpio_3_toggle',
             71: None,
             72: None,
             73: None,
+<<<<<<< HEAD
             74: None,
             75: None,
             76: None,
             77: None,
             78: None,
+=======
+            74: 'B',
+            75: 'RA_P',
+            76: 'STOP',
+            77: 'RA_M',
+            78: 'C',
+>>>>>>> 1fbe164a9eaccf3b469b6b474b2ffdf9db2c0038
             79: None,
             80: None,
             81: None,
@@ -119,6 +165,7 @@ class user_input(arom_helper.AromNode):
                     while True:
                         dev_out = dev.next()
                         if dev_out.type == ecodes.EV_KEY and dev_out.value in [0,1]:
+                            print(dev_out)
                             data.append(self.GetKey(dev_out))
                 except Exception as e:
                     pass
