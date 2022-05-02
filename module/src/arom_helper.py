@@ -1,32 +1,25 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import rosgraph
 import rospy
 import os
-import sys
-from arom.srv import *
-from arom.msg import *
+import arom
+from arom import srv 
 
 class AromNode():
     def __init__(self):
-        try:
-            rosgraph.Master('/rostopic').getPid()
-        except Exception, e:
-            print ("Unable to communicate with master!")
-            print ("Try start ROSCORE or ROSLAUNCH some project")
-            sys.exit(0)
-            #raise e
 
         try:
+            print "AromNode INIT"
             if self.node_pymlab:
-                #self.pymlabService = rospy.ServiceProxy('pymlab_drive', PymlabDrive)
-                self.pymlab = rospy.ServiceProxy('pymlab_drive', PymlabDrive)
+                self.pymlab = rospy.ServiceProxy('pymlab_drive', srv.PymlabDrive)
                 rospy.set_param('/arom/node'+rospy.get_name()+"/pymlab", True)
             else:
                 rospy.set_param('/arom/node'+rospy.get_name()+"/pymlab", False)
+                print "Chyba pri vytvareni pymlabu"
+                rospy.logerr("Chyba pri vytvareni pymlabu")
         except Exception, e:
-            print rospy.get_name()
+            print e
             rospy.set_param('/arom/node'+rospy.get_name()+"/pymlab", False)
 
         print "Starting init"
@@ -36,7 +29,7 @@ class AromNode():
         print "Init done:", rospy.get_name()
 
     #def pymlab(self, *args, **kwds):
-    #    self.pymlabService(**kwds)
+        #self.pymlabService(**kwds)
 
     def set_feature(self, name, value):
         rospy.set_param('/arom/node%s/feature/%s' %(str(rospy.get_name()),name), value)

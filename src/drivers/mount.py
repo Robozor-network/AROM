@@ -17,6 +17,8 @@ from std_msgs.msg import Float32MultiArray
 from arom.srv import *
 from arom.msg import *
 import numpy as np
+import pprint 
+pp = pprint.PrettyPrinter(indent=4)
 
 #from arom_tools import *
 from __init__ import AromNode
@@ -30,8 +32,8 @@ from astropy.coordinates import ICRS, Galactic, FK4, FK5, AltAz  # Low-level fra
 from astropy.coordinates import Angle, Latitude, Longitude  # Angles
 from astropy.coordinates import EarthLocation
 from astropy.coordinates import get_sun #, get_body
-from astropy.coordinates import solar_system_ephemeris
-#from astroquery.simbad import Simbad
+#from astropy.coordinates import solar_system_ephemeris
+from astroquery.simbad import Simbad
 
 btn_data = []
 
@@ -58,7 +60,11 @@ class mount(AromNode):
         self.name = name
         self.sname = self.name
         self.variables = var
-        self.rate = 1
+        self.rate = 5
+
+        self.speeds = [0, 10, 20, 40, 80, 160]
+        self.raSpeedType = 0
+        self.decSpeedType = 0
 
         self.mount = drive(profile = 'HEQ5', mode = "eq", connectMethod = 'pymlab',
             obs_lat = 48.986976, obs_lon = 14.467532, obs_alt = 382, port = '/dev/ttyUSB0')
@@ -69,9 +75,14 @@ class mount(AromNode):
         #self.mount.Slew(SkyCoord(alt = 45, az = 10, obstime = Time.now(), frame = 'altaz', unit="deg", location = self.mount.getObs()).icrs)
 
         rospy.Subscriber("/mount/controll", String, callback_btn)
+        rospy.Subscriber("/mount/set/offset2", String, self.set_offset)
         rospy.Subscriber("/arom/UI/buttons", String, callback_btn)
+        rospy.Subscriber("/ui/Keyboard/out", String, callback_btn)
         self.pub_status = rospy.Publisher('/mount/status', String, queue_size=10)
         self.pub_radec  = rospy.Publisher('/mount/status/coordinates/RaDec', Float32MultiArray, queue_size=10)
+        self.pub_radec_mount  = rospy.Publisher('/mount/status/coordinates/RaDec_mount', Float32MultiArray, queue_size=10) # souradnice, ktere nemaji chybu offsetu
+        self.pub_motor_a = rospy.Publisher("/mount/status/motor/ra", std_msgs.msg.String, queue_size=10)
+        self.pub_motor_b = rospy.Publisher("/mount/status/motor/dec", std_msgs.msg.String, queue_size=10)
 
         #rospy.init_node('AROM_mount')
         AromNode.__init__(self)
@@ -79,15 +90,22 @@ class mount(AromNode):
         #self.set_feature('mount_offset',{'subscrib': '/mount/controll'})
         self.set_feature('mount_slew',{'subscrib': '/mount/controll', 'publish': '/mount/status/coordinates/RaDec'})
         self.set_feature('mount_tracking',{'subscrib': '/mount/controll', 'publish': '/mount/status/coordinates/RaDec'})
+
+        self.set_feature('hbstep_status__1',  {'id': 'motor_a', 'name': 'Motor RA',  'toppic': '/mount/status/motor/ra'})
+        self.set_feature('hbstep_status__2',  {'id': 'motor_b', 'name': 'Motor DEC', 'toppic': '/mount/status/motor/dec'})
+
         self.set_feature('mount_skymap',{})
         #self.set_feature('mount_info',{'type': 'HEQ5', 'mount_mode': 'eq', 'obs_lat': 10.2332, 'obs_lon': 10.2332, 'obs_alt': 10.2332})
+
+        (trackSpd_ra, trackSpd_dec) = self.mount.getDefaultTrackingSpd()
+        print (trackSpd_ra, trackSpd_dec)
 
         print "zinicializovano"
 
         rate = rospy.Rate(self.rate)
         ra = 0
         dec = 90
-        rospy.Timer(rospy.Duration(1), self.send_position, oneshot=False)
+        rospy.Timer(rospy.Duration(1), self.sendPosition, oneshot=False)
         while not rospy.is_shutdown():
             try:
                 if len(btn_data) > 0:
@@ -124,14 +142,19 @@ class mount(AromNode):
 
                     elif "spd" in lastBtn:
                         split = lastBtn.split(" ")
+                        trackSpd_ra += float(split[1])
+                        trackSpd_dec += float(split[2])
                         self.mount.setTrackingSpeed(ra = float(split[1]), dec = float(split[2]))
+                        print split[1], split[2]
                         self.mount.tracking(True)
                         
-                    elif "startTracking" in lastBtn:
-                        self.mount.tracking(True)
+                    elif lastBtn in ["startTracking"]:
+                        self.mount.tracking(True, tracking_mode='sidereal')
                         
-                    elif "stopTracking" in lastBtn:
-                        self.mount.tracking(False)
+                    elif lastBtn in ['stopTracking', 'STOP1']:
+                        trackSpd_ra, trackSpd_dec = 1.7, 0
+                        self.mount.setTrackingSpeed(ra = trackSpd_ra, dec = trackSpd_dec)
+                        self.mount.tracking(True)
                         
                     elif lastBtn == 'home' or lastBtn == 'KEY_STOP':
                         self.mount.GoPark()
@@ -139,21 +162,33 @@ class mount(AromNode):
                     elif lastBtn == 'KEY_OK':
                         self.mount.Slew(SkyCoord(ra = float(split[1]), dec = float(split[2]), frame = 'icrs', unit="deg"))
 
-                    elif lastBtn == 'KEY_UP':
-                        dec += 10
-                        self.mount.Slew(SkyCoord(ra = ra, dec=dec, unit="deg"))
+                    elif lastBtn in ['KEY_UP', 'DEC_P1']:
+                        trackSpd_dec += 10
+                        self.mount.setTrackingSpeed(ra = float(trackSpd_ra), dec = float(trackSpd_dec))
+                        self.mount.tracking(True)
+                        #dec += 10
+                        #self.mount.Slew(SkyCoord(ra = ra, dec=dec, unit="deg"))
 
-                    elif lastBtn == 'KEY_DOWN':
-                        dec -= 10
-                        self.mount.Slew(SkyCoord(ra = ra, dec=dec, unit="deg"))
+                    elif lastBtn in ['KEY_DOWN', 'DEC_M1']:
+                        trackSpd_dec -= 10
+                        self.mount.setTrackingSpeed(ra = float(trackSpd_ra), dec = float(trackSpd_dec))
+                        self.mount.tracking(True)
+                        #dec -= 10
+                        #self.mount.Slew(SkyCoord(ra = ra, dec=dec, unit="deg"))
 
-                    elif lastBtn == 'KEY_LEFT':
-                        ra += 10
-                        self.mount.Slew(SkyCoord(ra = ra, dec=dec, unit="deg"))
+                    elif lastBtn in ['KEY_LEFT', 'RA_P1']:
+                        trackSpd_ra += 10
+                        self.mount.setTrackingSpeed(ra = float(trackSpd_ra), dec = float(trackSpd_dec))
+                        self.mount.tracking(True)
+                        #ra += 10
+                        #self.mount.Slew(SkyCoord(ra = ra, dec=dec, unit="deg"))
 
-                    elif lastBtn == 'KEY_RIGHT':
-                        ra -= 10
-                        self.mount.Slew(SkyCoord(ra = ra, dec=dec, unit="deg"))
+                    elif lastBtn in ['KEY_RIGHT', 'RA_M1']:
+                        trackSpd_ra -= 10
+                        self.mount.setTrackingSpeed(ra = float(trackSpd_ra), dec = float(trackSpd_dec))
+                        self.mount.tracking(True)
+                        #ra -= 10
+                        #self.mount.Slew(SkyCoord(ra = ra, dec=dec, unit="deg"))
 
                     elif lastBtn == 'KEY_MENU':
                         pass
@@ -166,6 +201,7 @@ class mount(AromNode):
                     elif lastBtn == 'KEY_PLAY' or lastBtn == "unpark":
                         self.mount.UnPark()
                 else:
+                    #print "Something else ....."
                     #(ra, dec) = self.mount.getCoordinates('RaDec')
                     #print ra, dec
 
@@ -192,13 +228,28 @@ class mount(AromNode):
 
         self.connection.close()
 
-    def send_position(self, object):
-        try:
-            coord = self.mount.getCoordinates()
+    def set_offset(self, msg):
+        array =  msg.data.split(";")
+        print array
+        self.mount.setOffset(ra=array[0], dec=array[1])
+
+    def sendPosition(self, object):
+        try:   
+            coord = self.mount.getCoordinates(sky = True)
+            coord_mount = self.mount.getCoordinates(sky = False)
+            motor_a, motor_b = self.mount.getStepperStatus()
+
             mat = Float32MultiArray(data=[coord.ra.degree, coord.dec.degree])
             self.pub_radec.publish(mat)
+            mat = Float32MultiArray(data=[coord_mount.ra.degree, coord_mount.dec.degree])
+            self.pub_radec_mount.publish(mat)
+
+            if motor_a:
+                self.pub_motor_a.publish(json.dumps(motor_a, ensure_ascii=False))
+            if motor_b:
+                self.pub_motor_b.publish(json.dumps(motor_b, ensure_ascii=False))
         except Exception, e:
-            print e
+            print "send", e
             
 
 

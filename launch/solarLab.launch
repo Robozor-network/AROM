@@ -37,12 +37,6 @@
         type="runWeb.sh"
     /> 
 
-    <node
-        name="web_video_server"
-        pkg="web_video_server"
-        type="web_video_server"
-    /> 
-
 
   <arg name="port" default="9090" />
   <arg name="address" default="" />

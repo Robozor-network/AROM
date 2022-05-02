@@ -46,6 +46,8 @@ class gpio_mount(AromNode):
         self.set_feature('gpio_all_off',{'subscrib': '/gpio/gpio_mount', 'msg': 'off'})
 
         self.pymlab(device="gpio_mount", method="config_ports", parameters=str(dict(port0 = self.config0, port1 = self.config1)))
+        self.pymlab(device="gpio_mount", method="set_ports", parameters=str(dict(port0 = self.port0, port1 = self.port1)))
+
         rate = rospy.Rate(5)
         rospy.Timer(rospy.Duration(2), self.send_status, oneshot=False)
         while not rospy.is_shutdown():
@@ -92,6 +94,7 @@ class gpio_mount(AromNode):
 
     def send_status(self, object):
         print "posilam status"
+        #print self.pymlab(device="gpio_mount", method="get_ports").value
         port0, port1 = eval(self.pymlab(device="gpio_mount", method="get_ports").value)
         self.pub_status.publish(str(bin(port0)[2:].zfill(8))+str(bin(port1)[2:].zfill(8)))
             

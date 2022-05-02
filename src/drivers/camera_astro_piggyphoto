@@ -17,6 +17,7 @@ import arom
 import camera_astro
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
+import numpy as np
 
 import os
 import piggyphoto
@@ -36,6 +37,9 @@ class AstroCamCanon(camera_astro.AstroCam):
     def connect(self):
         print "connect"
         self.camera = piggyphoto.Camera()
+        self.conf_list = self.camera.list_config()
+        self.conf_dict = {}
+        self.getSetting()
         print "End connect"
 
     def setFocuser(self, name = None, type = None):
@@ -51,21 +55,24 @@ class AstroCamCanon(camera_astro.AstroCam):
         raise NotImplementedError
 
     def getSetting(self, name = None):
-        conf_dict = {}
-        self.camera.list_config()
-        for config in self.camera.list_config():
+        for config in self.conf_list:
             try:
 
                 cfg = {}
-                exec 'cfg["value"] = self.camera.config.'+config+'.value'
-                exec 'cfg["choices"] = self.camera.config.'+config+'.choices'
+                #print config,
+
+                cfg["value"] = eval('self.camera.config.'+config+'.value')
+                cfg["choices"] = eval('self.camera.config.'+config+'.choices')
+                #exec 'cfg["value"] = self.camera.config.'+config+'.value'
+                #exec 'cfg["choices"] = self.camera.config.'+config+'.choices'
                 cfg["type"] = 'select'
-                conf_dict[str(config)] = cfg
+                #print cfg
+                self.conf_dict[str(config)] = cfg
 
             except Exception as e:
-                print e
+                print "getConfig>>", e
             
-        rospy.set_param('/arom/node%s/feature/%s/config' %(str(rospy.get_name()),'cam_controll'), conf_dict)
+        rospy.set_param('/arom/node%s/feature/%s/config' %(str(rospy.get_name()),'cam_controll'), self.conf_dict)
         print "***********************"
 
     def setConfig(self, data = None):
@@ -93,9 +100,8 @@ class AstroCamCanon(camera_astro.AstroCam):
 
     def capture(self, n=1, camera = None, exposition = None, iso = None, focus = None, Zoom = None, save = True, publish = False, name = None, preview = False):
         try:
-            self.camera.capture_image('/home/odroid/robozor/snap'+datetime.datetime.now().strftime('%Y%m%d-%H%M%S'))
+            self.camera.capture_image('/home/odroid/storage/snap_'+datetime.datetime.now().strftime('%Y%m%d-%H%M%S')+'.cr2')
             print "done"
-
             
         except Exception, e:
             rospy.logerr(e)
@@ -109,12 +115,16 @@ class AstroCamCanon(camera_astro.AstroCam):
 
     def streamLoop(self):
         print "loop"
-        self.camera.capture_preview('/home/odroid/robozor/preview.jpg').clean()
-        frame = cv2.imread('/home/odroid/robozor/preview.jpg')
+        # zkusit to touto cestou https://github.com/alexdu/piggyphoto/issues/2#issuecomment-91809942
+        #
+        # protoze fce capture_preview vraci nejaky cfile
+        cfile = self.camera.capture_preview()
+        data = cfile.get_data()
+        nparr = np.fromstring(data, np.uint8)
+        frame = cv2.imdecode(nparr, cv2.CV_LOAD_IMAGE_COLOR) # cv2.IMREAD_COLOR in OpenCV 3.1
         self.pub_image.publish(self.bridge.cv2_to_imgmsg(frame, "bgr8"))
-        del frame
-        time.sleep(0.2)
-        print "loop"
+        #del frame
+        #time.sleep(0.3)
 
     def exit(self):
         #del self.camera
